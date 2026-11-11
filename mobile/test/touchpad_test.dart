@@ -12,7 +12,8 @@ class FakeLink extends Link {
   @override
   void sendMove(int dx, int dy) => log.add('move');
   @override
-  void sendButton(MouseButton b, bool pressed) => log.add('${pressed ? 'down' : 'up'} ${b.name}');
+  void sendButton(MouseButton b, bool pressed) =>
+      log.add('${pressed ? 'down' : 'up'} ${b.name}');
   @override
   void sendClick(MouseButton b) => log.add('click ${b.name}');
   @override
@@ -26,11 +27,13 @@ class FakeLink extends Link {
 void main() {
   Future<FakeLink> pump(WidgetTester tester) async {
     final link = FakeLink();
-    await tester.pumpWidget(MaterialApp(home: Scaffold(body: TouchpadPage(link: link))));
+    await tester.pumpWidget(
+        MaterialApp(home: Scaffold(body: TouchpadPage(link: link))));
     return link;
   }
 
-  Future<List<TestGesture>> fingers(WidgetTester tester, List<Offset> at) async {
+  Future<List<TestGesture>> fingers(
+      WidgetTester tester, List<Offset> at) async {
     final list = <TestGesture>[];
     for (final p in at) {
       list.add(await tester.startGesture(p));
@@ -39,7 +42,8 @@ void main() {
   }
 
   /// Fait bouger chaque doigt par petits pas, à tour de rôle (comme de vrais doigts).
-  Future<void> move(List<TestGesture> g, List<Offset> totals, {int steps = 10}) async {
+  Future<void> move(List<TestGesture> g, List<Offset> totals,
+      {int steps = 10}) async {
     for (var i = 0; i < steps; i++) {
       for (var k = 0; k < g.length; k++) {
         await g[k].moveBy(totals[k] / steps.toDouble());
@@ -98,11 +102,17 @@ void main() {
     await liftAll(g);
     final scrolls = link.log.where((e) => e.startsWith('scroll')).toList();
     expect(scrolls.isNotEmpty, true);
-    expect(scrolls.every((e) => !e.contains('-')), true); // positif = vers le bas
-    expect(link.log.any((e) => e.startsWith('click') || e == 'move' || e.startsWith('zoom')), false);
+    expect(
+        scrolls.every((e) => !e.contains('-')), true); // positif = vers le bas
+    expect(
+        link.log.any((e) =>
+            e.startsWith('click') || e == 'move' || e.startsWith('zoom')),
+        false);
   });
 
-  testWidgets('2 doigts vers la droite = scroll horizontal vers la gauche (naturel)', (tester) async {
+  testWidgets(
+      '2 doigts vers la droite = scroll horizontal vers la gauche (naturel)',
+      (tester) async {
     final link = await pump(tester);
     final g = await fingers(tester, const [Offset(150, 300), Offset(250, 300)]);
     await move(g, const [Offset(60, 0), Offset(60, 0)]);
@@ -132,36 +142,52 @@ void main() {
 
   testWidgets('3 doigts vers le haut = vue des tâches', (tester) async {
     final link = await pump(tester);
-    final g = await fingers(tester, const [Offset(100, 300), Offset(180, 300), Offset(260, 300)]);
+    final g = await fingers(
+        tester, const [Offset(100, 300), Offset(180, 300), Offset(260, 300)]);
     await move(g, List.filled(3, const Offset(0, -90)));
     await liftAll(g);
-    expect(link.log.where((e) => e.startsWith('gesture')).toList(), ['gesture taskView']);
+    expect(link.log.where((e) => e.startsWith('gesture')).toList(),
+        ['gesture taskView']);
     expect(link.log.contains('move'), false);
   });
 
   testWidgets('3 doigts vers la droite = appli suivante', (tester) async {
     final link = await pump(tester);
-    final g = await fingers(tester, const [Offset(100, 300), Offset(180, 300), Offset(260, 300)]);
+    final g = await fingers(
+        tester, const [Offset(100, 300), Offset(180, 300), Offset(260, 300)]);
     await move(g, List.filled(3, const Offset(90, 0)));
     await liftAll(g);
-    expect(link.log.where((e) => e.startsWith('gesture')).toList(), ['gesture nextApp']);
+    expect(link.log.where((e) => e.startsWith('gesture')).toList(),
+        ['gesture nextApp']);
   });
 
-  testWidgets('4 doigts vers la gauche = bureau virtuel à gauche', (tester) async {
+  testWidgets('4 doigts vers la gauche = bureau virtuel à gauche',
+      (tester) async {
     final link = await pump(tester);
-    final g = await fingers(
-        tester, const [Offset(60, 300), Offset(120, 300), Offset(180, 300), Offset(240, 300)]);
+    final g = await fingers(tester, const [
+      Offset(60, 300),
+      Offset(120, 300),
+      Offset(180, 300),
+      Offset(240, 300)
+    ]);
     await move(g, List.filled(4, const Offset(-90, 0)));
     await liftAll(g);
-    expect(link.log.where((e) => e.startsWith('gesture')).toList(), ['gesture desktopLeft']);
+    expect(link.log.where((e) => e.startsWith('gesture')).toList(),
+        ['gesture desktopLeft']);
   });
 
-  testWidgets('tap 3 doigts = recherche, tap 4 doigts = notifications', (tester) async {
+  testWidgets('tap 3 doigts = recherche, tap 4 doigts = notifications',
+      (tester) async {
     final link = await pump(tester);
-    var g = await fingers(tester, const [Offset(100, 300), Offset(180, 300), Offset(260, 300)]);
+    var g = await fingers(
+        tester, const [Offset(100, 300), Offset(180, 300), Offset(260, 300)]);
     await liftAll(g);
-    g = await fingers(
-        tester, const [Offset(60, 300), Offset(120, 300), Offset(180, 300), Offset(240, 300)]);
+    g = await fingers(tester, const [
+      Offset(60, 300),
+      Offset(120, 300),
+      Offset(180, 300),
+      Offset(240, 300)
+    ]);
     await liftAll(g);
     expect(link.log, ['gesture search', 'gesture notifications']);
   });

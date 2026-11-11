@@ -9,6 +9,7 @@
 //! le scroll (molette) et les touches de diaporama (suivant, précédent...).
 
 mod cursor;
+mod laser;
 mod protocol;
 
 use cursor::{Cursor, DryRun};
@@ -61,6 +62,7 @@ fn run(socket: &UdpSocket, cursor: &mut dyn Cursor) {
     let mut last_seq: Option<u16> = None;
     let mut left_down = false;
     let mut right_down = false;
+    let mut laser_on = false; // laser allumé : les mouvements le déplacent, pas le curseur
 
     loop {
         match socket.recv_from(&mut buf) {
@@ -78,7 +80,11 @@ fn run(socket: &UdpSocket, cursor: &mut dyn Cursor) {
                         let dx = dx.clamp(-MAX_STEP, MAX_STEP) as i32;
                         let dy = dy.clamp(-MAX_STEP, MAX_STEP) as i32;
                         if dx != 0 || dy != 0 {
-                            cursor.move_by(dx, dy);
+                            if laser_on {
+                                cursor.laser_move_by(dx, dy);
+                            } else {
+                                cursor.move_by(dx, dy);
+                            }
                         }
                     }
                     Event::Button { button, pressed } => {
@@ -111,6 +117,10 @@ fn run(socket: &UdpSocket, cursor: &mut dyn Cursor) {
                         }
                     }
                     Event::Slide(action) => cursor.slide(action),
+                    Event::Laser { on } => {
+                        laser_on = on;
+                        cursor.laser(on);
+                    }
                 }
             }
             // Silence prolongé : on relâche les boutons restés enfoncés.
@@ -122,6 +132,11 @@ fn run(socket: &UdpSocket, cursor: &mut dyn Cursor) {
                 if right_down {
                     cursor.button(Button::Right, false);
                     right_down = false;
+                }
+                // Le téléphone ne donne plus signe de vie : on éteint le laser.
+                if laser_on {
+                    cursor.laser(false);
+                    laser_on = false;
                 }
             }
             Err(e) => {

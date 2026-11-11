@@ -16,6 +16,8 @@
 //!                                              6 = notifications, 7 = bureau virtuel à gauche,
 //!                                              8 = bureau virtuel à droite
 //!   type 6  ZOOM      (5 octets)  [3..5] crans de zoom (i16) : positif = zoom avant
+//!   type 7  LASER     (4 octets)  [3] 1 = allumer le laser, 0 = l'éteindre. Tant qu'il est allumé,
+//!                                 les MOUVEMENTS déplacent le point laser et non le curseur.
 //!
 //! Tous les nombres sont en "little endian" (octet de poids faible d'abord).
 //! Les mêmes octets sont décrits côté téléphone dans `mobile/lib/link.dart` :
@@ -35,6 +37,7 @@ const TYPE_SCROLL: u8 = 3;
 const TYPE_SLIDE: u8 = 4;
 const TYPE_GESTURE: u8 = 5;
 const TYPE_ZOOM: u8 = 6;
+const TYPE_LASER: u8 = 7;
 
 /// Garde-fou : un seul ticket ne peut jamais zoomer de plus que ça (en crans).
 pub const MAX_ZOOM: i16 = 10;
@@ -78,6 +81,7 @@ pub enum Event {
     Slide(SlideAction),
     Gesture(GestureAction),
     Zoom { steps: i16 },
+    Laser { on: bool },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -130,6 +134,11 @@ pub fn parse(buf: &[u8]) -> Option<Packet> {
             };
             Some(Packet { seq, event: Event::Gesture(action) })
         }
+        TYPE_LASER if buf.len() == 4 => match buf[3] {
+            0 => Some(Packet { seq, event: Event::Laser { on: false } }),
+            1 => Some(Packet { seq, event: Event::Laser { on: true } }),
+            _ => None,
+        },
         TYPE_ZOOM if buf.len() == 5 => {
             let steps = i16::from_le_bytes([buf[3], buf[4]]);
             Some(Packet { seq, event: Event::Zoom { steps } })
@@ -184,6 +193,11 @@ mod tests {
         let p = parse(&[6, 7, 0, 253, 255]).unwrap();
         assert_eq!(p.event, Event::Zoom { steps: -3 });
 
+        let p = parse(&[7, 8, 0, 1]).unwrap();
+        assert_eq!(p.event, Event::Laser { on: true });
+        let p = parse(&[7, 9, 0, 0]).unwrap();
+        assert_eq!(p.event, Event::Laser { on: false });
+
         let p = parse(&[4, 5, 0, 1]).unwrap();
         assert_eq!(p.event, Event::Slide(SlideAction::Next));
     }
@@ -211,6 +225,7 @@ mod tests {
         assert!(parse(&[TYPE_SCROLL, 0, 0, 1, 0]).is_none()); // trop court
         assert!(parse(&[TYPE_GESTURE, 0, 0, 9]).is_none()); // geste inconnu
         assert!(parse(&[TYPE_ZOOM, 0, 0, 1]).is_none()); // trop court
+        assert!(parse(&[TYPE_LASER, 0, 0, 2]).is_none()); // état inconnu
         assert!(parse(&[TYPE_SLIDE, 0, 0, 9]).is_none()); // action inconnue
         assert!(parse(&[TYPE_SLIDE, 0, 0, 1, 1]).is_none()); // trop long
     }

@@ -17,6 +17,7 @@ const int kTypeScroll = 3;
 const int kTypeSlide = 4;
 const int kTypeGesture = 5;
 const int kTypeZoom = 6;
+const int kTypeLaser = 7;
 
 enum MouseButton { left, right }
 
@@ -79,6 +80,15 @@ class Packets {
     d.setUint8(0, kTypeGesture);
     d.setUint16(1, seq, Endian.little);
     d.setUint8(3, action.index + 1);
+    return d.buffer.asUint8List();
+  }
+
+  /// Allume (true) ou éteint (false) le laser sur le PC.
+  static Uint8List laser(int seq, bool on) {
+    final d = ByteData(4);
+    d.setUint8(0, kTypeLaser);
+    d.setUint16(1, seq, Endian.little);
+    d.setUint8(3, on ? 1 : 0);
     return d.buffer.asUint8List();
   }
 
@@ -158,6 +168,7 @@ class Link extends ChangeNotifier {
   void sendClick(MouseButton b) => _send(Packets.button(_nextSeq(), b, 2));
   void sendScroll(int dx, int dy) => _send(Packets.scroll(_nextSeq(), dx, dy));
   void sendGesture(GestureAction a) => _send(Packets.gesture(_nextSeq(), a));
+  void sendLaser(bool on) => _send(Packets.laser(_nextSeq(), on));
   void sendZoom(int steps) => _send(Packets.zoom(_nextSeq(), steps));
   void sendSlide(SlideAction a) => _send(Packets.slide(_nextSeq(), a));
 }

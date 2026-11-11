@@ -5,7 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pandapointer/main.dart';
 
 void main() {
-  testWidgets('les 3 onglets s\'affichent, le mode gyro continu se règle', (tester) async {
+  testWidgets('les 3 onglets s\'affichent, le mode gyro continu se règle',
+      (tester) async {
     await tester.pumpWidget(const PandaPointerApp());
     expect(find.text('Maintiens pour bouger'), findsOneWidget);
 
@@ -17,6 +18,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Suivant'), findsOneWidget);
     expect(find.text('Maintiens pour pointer'), findsOneWidget);
+
+    // Choix du pointeur : curseur par défaut, laser sélectionnable.
+    expect(find.text('Curseur'), findsOneWidget);
+    await tester.tap(find.text('Laser'));
+    await tester.pumpAndSettle();
 
     // Mode "Toujours" : l'interrupteur apparaît, éteint par défaut.
     await tester.tap(find.text('Toujours'));

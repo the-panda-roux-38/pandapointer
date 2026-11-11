@@ -33,6 +33,11 @@ void main() {
     expect(Packets.gesture(6, GestureAction.taskView), [5, 6, 0, 1]);
   });
 
+  test('laser', () {
+    expect(Packets.laser(8, true), [7, 8, 0, 1]);
+    expect(Packets.laser(9, false), [7, 9, 0, 0]);
+  });
+
   test('zoom', () {
     expect(Packets.zoom(7, -3), [6, 7, 0, 253, 255]);
   });

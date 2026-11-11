@@ -13,6 +13,9 @@ pub trait Cursor {
     fn gesture(&mut self, action: GestureAction);
     /// Zoom (Ctrl + molette) : positif = zoom avant.
     fn zoom(&mut self, steps: i32);
+    /// Allume / éteint le laser (point rouge). Allumé, `laser_move_by` le déplace.
+    fn laser(&mut self, on: bool);
+    fn laser_move_by(&mut self, dx: i32, dy: i32);
 }
 
 /// Mode test : n'agit sur rien, affiche juste ce qu'il ferait.
@@ -42,6 +45,12 @@ impl Cursor for DryRun {
     fn zoom(&mut self, steps: i32) {
         println!("[test] zoom de {steps} crans");
     }
+    fn laser(&mut self, on: bool) {
+        println!("[test] laser {}", if on { "allumé" } else { "éteint" });
+    }
+    fn laser_move_by(&mut self, dx: i32, dy: i32) {
+        println!("[test] laser déplacé de ({dx}, {dy})");
+    }
 }
 
 #[cfg(any(target_os = "windows", target_os = "macos"))]
@@ -57,12 +66,19 @@ mod real {
 
     pub struct RealCursor {
         enigo: Enigo,
+        /// Créé à la première utilisation du laser (inutile de lancer un fil pour rien).
+        #[cfg(windows)]
+        laser: Option<crate::laser::Overlay>,
     }
 
     impl RealCursor {
         pub fn new() -> Result<Self, String> {
             let enigo = Enigo::new(&Settings::default()).map_err(|e| e.to_string())?;
-            Ok(Self { enigo })
+            Ok(Self {
+                enigo,
+                #[cfg(windows)]
+                laser: None,
+            })
         }
     }
 
@@ -128,6 +144,31 @@ mod real {
                 eprintln!("Impossible de zoomer : {e}");
             }
             let _ = self.enigo.key(Key::Control, Direction::Release);
+        }
+
+        #[cfg(windows)]
+        fn laser(&mut self, on: bool) {
+            if on {
+                self.laser.get_or_insert_with(crate::laser::Overlay::new).show();
+            } else if let Some(l) = self.laser.as_mut() {
+                l.hide();
+            }
+        }
+
+        #[cfg(windows)]
+        fn laser_move_by(&mut self, dx: i32, dy: i32) {
+            if let Some(l) = self.laser.as_mut() {
+                l.move_by(dx, dy);
+            }
+        }
+
+        // Pas de laser dessiné sur Mac pour l'instant : le mouvement bouge le curseur à la place.
+        #[cfg(not(windows))]
+        fn laser(&mut self, _on: bool) {}
+
+        #[cfg(not(windows))]
+        fn laser_move_by(&mut self, dx: i32, dy: i32) {
+            self.move_by(dx, dy);
         }
 
         fn gesture(&mut self, action: GestureAction) {

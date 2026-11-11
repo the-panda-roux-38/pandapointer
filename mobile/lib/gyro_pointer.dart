@@ -26,14 +26,23 @@ class GyroPointer extends ChangeNotifier {
   /// Onglet Slides : false = "maintenir un bouton", true = "toujours actif".
   bool continuousMode = false;
 
+  /// Onglet Slides : false = le pointeur est le vrai curseur, true = un point laser rouge.
+  bool laserStyle = false;
+
   bool _holding = false; // un bouton "maintiens pour bouger" est enfoncé
   bool _continuousOn = false; // l'interrupteur "pointeur actif" est allumé
   bool _slidesMode = false; // l'onglet Slides est affiché
 
   StreamSubscription<GyroscopeEvent>? _sub;
   bool _wasMoving = false;
+  bool _laserWasOn = false;
+  Timer?
+      _laserBeat; // petit signal régulier pour que le PC garde le laser allumé
   DateTime? _lastEvent;
   double _remX = 0, _remY = 0; // reste fractionnaire en pixels
+
+  /// Le laser est-il utilisé en ce moment ? (seulement sur l'onglet Slides, en pointant)
+  bool get laserActive => moving && _slidesMode && laserStyle;
 
   bool get holding => _holding;
   bool get continuousOn => _continuousOn;
@@ -64,6 +73,11 @@ class GyroPointer extends ChangeNotifier {
     _refresh();
   }
 
+  void setLaserStyle(bool v) {
+    laserStyle = v;
+    _refresh();
+  }
+
   void update(void Function() change) {
     change();
     notifyListeners();
@@ -84,7 +98,24 @@ class GyroPointer extends ChangeNotifier {
         _sub = null;
       }
     }
+    _refreshLaser();
     notifyListeners();
+  }
+
+  /// Allume / éteint le laser du PC quand on commence / arrête de pointer.
+  void _refreshLaser() {
+    final on = laserActive;
+    if (on == _laserWasOn) return;
+    _laserWasOn = on;
+    _laserBeat?.cancel();
+    _laserBeat = null;
+    link.sendLaser(on);
+    if (on) {
+      // Le PC éteint le laser après 3 s de silence : si on tient le téléphone
+      // immobile, on lui rappelle toutes les secondes qu'on est toujours là.
+      _laserBeat = Timer.periodic(
+          const Duration(seconds: 1), (_) => link.sendLaser(true));
+    }
   }
 
   void _onGyro(GyroscopeEvent e) {
@@ -118,6 +149,7 @@ class GyroPointer extends ChangeNotifier {
   @override
   void dispose() {
     link.removeListener(_refresh);
+    _laserBeat?.cancel();
     _sub?.cancel();
     super.dispose();
   }

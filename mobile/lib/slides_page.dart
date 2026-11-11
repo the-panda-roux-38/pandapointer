@@ -72,6 +72,30 @@ class SlidesPage extends StatelessWidget {
                 onSelectionChanged: (s) => pointer.setContinuousMode(s.first),
               ),
             ]),
+            const SizedBox(height: 8),
+            Row(children: [
+              const Text('Pointeur :'),
+              const SizedBox(width: 8),
+              Expanded(
+                child: SegmentedButton<bool>(
+                  showSelectedIcon: false,
+                  style:
+                      const ButtonStyle(visualDensity: VisualDensity.compact),
+                  segments: const [
+                    ButtonSegment(
+                        value: false,
+                        icon: Icon(Icons.mouse, size: 18),
+                        label: Text('Curseur')),
+                    ButtonSegment(
+                        value: true,
+                        icon: Icon(Icons.flashlight_on, size: 18),
+                        label: Text('Laser')),
+                  ],
+                  selected: {pointer.laserStyle},
+                  onSelectionChanged: (s) => pointer.setLaserStyle(s.first),
+                ),
+              ),
+            ]),
             const SizedBox(height: 10),
             Row(children: [
               Expanded(

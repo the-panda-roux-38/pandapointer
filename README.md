@@ -115,7 +115,14 @@ Dans « Réglages du pavé » : vitesse, accélération, scroll naturel.
 - **Pointeur gyro** : deux modes. *Maintenu* : tu tiens le bouton et le curseur suit le téléphone.
   *Toujours* : tu allumes « Pointeur actif » et le curseur suit en continu (ça ne marche que sur l'onglet Slides,
   et ça repart éteint à chaque fois par sécurité). La sensibilité est la même que sur l'onglet Gyro.
-- Le laser (point rouge dédié) arrive juste après.
+- **Curseur ou Laser** : *Curseur* = ça bouge la vraie souris. *Laser* = un point rouge lumineux apparaît par-dessus
+  ton diaporama et suit le téléphone, **sans bouger le vrai curseur** (il apparaît là où se trouve le curseur,
+  puis se déplace tout seul). Il s'éteint quand tu relâches le bouton (ou après 3 s sans nouvelles du téléphone).
+  Le laser est dessiné par une fenêtre transparente que les clics traversent : il ne gêne rien et ne vole pas le focus.
+  Windows seulement pour l'instant (sur Mac, le « laser » bougerait le curseur).
+
+**À observer pour le laser :** le point est-il bien visible par-dessus PowerPoint en plein écran ? Sur tes deux écrans ?
+Bien centré sur le curseur au moment où il s'allume ? Pas de décalage de position ?
 
 **À observer :** tap bien reconnu (pas de clic en glissant) ? Scroll trop rapide ou trop lent ?
 Le zoom est-il confondu avec le scroll ? Les gestes 3 et 4 doigts partent-ils tout seuls par erreur ?
