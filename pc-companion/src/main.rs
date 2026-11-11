@@ -118,8 +118,13 @@ fn run(socket: &UdpSocket, cursor: &mut dyn Cursor) {
                     }
                     Event::Slide(action) => cursor.slide(action),
                     Event::Laser { on } => {
-                        laser_on = on;
-                        cursor.laser(on);
+                        // Le téléphone renvoie « allumé » chaque seconde pour dire qu'il est toujours là.
+                        // Si le laser est déjà allumé, on ne fait rien : le rallumer le replacerait
+                        // sur le curseur de la souris.
+                        if on != laser_on {
+                            laser_on = on;
+                            cursor.laser(on);
+                        }
                     }
                 }
             }

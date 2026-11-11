@@ -126,6 +126,9 @@ mod overlay {
 
         /// Allume le laser à l'endroit où se trouve le curseur.
         pub fn show(&mut self) {
+            if self.visible {
+                return; // déjà allumé : on garde sa position
+            }
             self.tracker.set_bounds(virtual_screen());
             let mut p = POINT { x: 0, y: 0 };
             unsafe { GetCursorPos(&mut p) };
