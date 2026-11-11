@@ -130,6 +130,12 @@ class Link extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Affiche un message dans la barre d'état (ex. : le gyroscope a refusé de démarrer).
+  void reportProblem(String message) {
+    status = message;
+    notifyListeners();
+  }
+
   void _close() {
     _socket?.close();
     _socket = null;

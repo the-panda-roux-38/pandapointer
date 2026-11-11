@@ -127,6 +127,26 @@ Bien centré sur le curseur au moment où il s'allume ? Pas de décalage de posi
 **À observer :** tap bien reconnu (pas de clic en glissant) ? Scroll trop rapide ou trop lent ?
 Le zoom est-il confondu avec le scroll ? Les gestes 3 et 4 doigts partent-ils tout seuls par erreur ?
 
+## Gyro plus précis : quoi régler et tester
+
+L'onglet **Gyro** a maintenant trois réglages (partagés avec Slides) :
+
+| Réglage | Ce que ça fait | Si tu constates... |
+| --- | --- | --- |
+| **Sensibilité** | Distance parcourue par le curseur pour un geste donné | curseur trop lent ou trop rapide |
+| **Stabilité** | Lisse le tremblement quand tu bouges à peine (le lissage disparaît dès que tu bouges vraiment) | ça tremble : monte. Ça semble mou sur les gestes lents : baisse |
+| **Précision petits mouvements** | Démultiplie les gestes lents pour viser au pixel près | trop de mal à viser un petit bouton : monte |
+
+Et « Recalibrer le zéro du capteur » si le curseur dérive tout seul téléphone posé (il se corrige déjà
+tout seul quand le téléphone est quasi immobile).
+
+Ce qui a changé sous le capot : le gyroscope est lu 200 fois par seconde (au lieu de 50), avec l'heure
+donnée par le capteur lui-même, et les mouvements sont envoyés par petits groupes d'environ 7 ms.
+
+**À observer :** compare avec l'ancienne version. Le tremblement a-t-il diminué ? Le retard a-t-il changé ?
+Arrives-tu à viser un petit bouton avec le laser ? Si le gyro ne répond plus du tout, la barre d'état
+affiche « Gyroscope indisponible » : préviens-moi avec le message exact.
+
 ## Limites connues (volontaires)
 
 - Aucune sécurité : toute personne sur ton Wi-Fi qui connaît l'IP pourrait envoyer des messages. À utiliser chez toi.

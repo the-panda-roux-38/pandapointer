@@ -86,6 +86,28 @@ class GyroPage extends StatelessWidget {
             max: 2000,
             onChanged: (v) => pointer.update(() => pointer.sensitivity = v),
           ),
+          Text('Stabilité : ${(pointer.stability * 100).round()} %'),
+          Slider(
+            value: pointer.stability,
+            onChanged: (v) => pointer.update(() => pointer.stability = v),
+          ),
+          Text(
+            'Plus c\'est haut, moins le curseur tremble quand tu bouges à peine. '
+            'Trop haut, il peut sembler un peu mou sur les mouvements lents.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 8),
+          Text(
+              'Précision petits mouvements : ${(pointer.precision * 100).round()} %'),
+          Slider(
+            value: pointer.precision,
+            onChanged: (v) => pointer.update(() => pointer.precision = v),
+          ),
+          Text(
+            'Plus c\'est haut, plus les gestes lents sont démultipliés (on vise au pixel près). '
+            'Les gestes rapides ne changent pas.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
           SwitchListTile(
             title: const Text('Inverser horizontal'),
             value: pointer.invertX,
@@ -95,6 +117,14 @@ class GyroPage extends StatelessWidget {
             title: const Text('Inverser vertical'),
             value: pointer.invertY,
             onChanged: (v) => pointer.update(() => pointer.invertY = v),
+          ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: pointer.recalibrate,
+              icon: const Icon(Icons.restart_alt),
+              label: const Text('Recalibrer le zéro du capteur'),
+            ),
           ),
         ],
       ),

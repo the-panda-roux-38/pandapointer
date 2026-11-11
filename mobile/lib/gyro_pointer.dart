@@ -3,12 +3,14 @@
 // tu règles une fois, ça vaut partout.
 //
 // Le gyroscope n'est écouté que pendant qu'il sert (économise la batterie).
+// Le calcul des pixels (anti-tremblement, précision...) est dans gyro_filter.dart.
 
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
+import 'gyro_filter.dart';
 import 'link.dart';
 
 class GyroPointer extends ChangeNotifier {
@@ -18,8 +20,17 @@ class GyroPointer extends ChangeNotifier {
 
   final Link link;
 
-  // Réglages
-  double sensitivity = 800; // pixels par radian tourné
+  /// Transforme la rotation brute en pixels propres (réglages : sensibilité, stabilité, précision).
+  final GyroFilter filter = GyroFilter();
+
+  // Réglages (les trois premiers vivent dans le filtre)
+  double get sensitivity => filter.sensitivity; // pixels par radian tourné
+  set sensitivity(double v) => filter.sensitivity = v;
+  double get stability => filter.stability; // 0 = réactif, 1 = très stable
+  set stability(double v) => filter.stability = v;
+  double get precision =>
+      filter.precision; // 0 = linéaire, 1 = petits mouvements démultipliés
+  set precision(double v) => filter.precision = v;
   bool invertX = false;
   bool invertY = false;
 
@@ -38,8 +49,18 @@ class GyroPointer extends ChangeNotifier {
   bool _laserWasOn = false;
   Timer?
       _laserBeat; // petit signal régulier pour que le PC garde le laser allumé
-  DateTime? _lastEvent;
-  double _remX = 0, _remY = 0; // reste fractionnaire en pixels
+  DateTime?
+      _lastStamp; // heure de la mesure précédente, donnée par le capteur lui-même
+  double _accX = 0, _accY = 0; // pixels calculés, pas encore envoyés
+  final Stopwatch _clock =
+      Stopwatch(); // pour envoyer les mouvements par petits groupes
+  int _lastSendMs = 0;
+
+  /// Le capteur est lu toutes les 5 ms (200 fois par seconde, le maximum autorisé sans
+  /// permission spéciale), mais on n'envoie au PC qu'environ toutes les 7 ms :
+  /// moins de paquets, et le curseur reste fluide.
+  static const Duration _samplingPeriod = Duration(milliseconds: 5);
+  static const int _sendEveryMs = 7;
 
   /// Le laser est-il utilisé en ce moment ? (seulement sur l'onglet Slides, en pointant)
   bool get laserActive => moving && _slidesMode && laserStyle;
@@ -88,11 +109,19 @@ class GyroPointer extends ChangeNotifier {
     if (m != _wasMoving) {
       _wasMoving = m;
       if (m) {
-        _remX = 0;
-        _remY = 0;
-        _lastEvent = DateTime.now();
-        _sub = gyroscopeEventStream(samplingPeriod: SensorInterval.gameInterval)
-            .listen(_onGyro);
+        _accX = 0;
+        _accY = 0;
+        _lastStamp = null;
+        filter.restart();
+        _clock
+          ..reset()
+          ..start();
+        _lastSendMs = 0;
+        _sub = gyroscopeEventStream(samplingPeriod: _samplingPeriod).listen(
+          _onGyro,
+          onError: (Object error) =>
+              link.reportProblem('Gyroscope indisponible : $error'),
+        );
       } else {
         _sub?.cancel();
         _sub = null;
@@ -118,32 +147,36 @@ class GyroPointer extends ChangeNotifier {
     }
   }
 
+  /// Remet le "zéro" du capteur à zéro (il se réapprend tout seul, téléphone immobile).
+  void recalibrate() {
+    filter.resetBias();
+    notifyListeners();
+  }
+
   void _onGyro(GyroscopeEvent e) {
-    final now = DateTime.now();
-    final last = _lastEvent;
-    _lastEvent = now;
+    final last = _lastStamp;
+    _lastStamp = e.timestamp;
     if (last == null) return;
-    final dt = now.difference(last).inMicroseconds / 1e6;
-    if (dt <= 0 || dt > 0.2) return; // mesure aberrante : on ignore
+    final dt = e.timestamp.difference(last).inMicroseconds / 1e6;
+    if (dt <= 0 || dt > 0.1) return; // mesure aberrante : on ignore
 
     // Téléphone à plat, bord supérieur vers l'écran : rotation autour de z =
-    // horizontal, autour de x = vertical. vitesse x durée = angle ; angle x
-    // sensibilité = pixels.
-    double dx = -e.z * dt * sensitivity;
-    double dy = -e.x * dt * sensitivity;
-    if (invertX) dx = -dx;
-    if (invertY) dy = -dy;
+    // horizontal, autour de x = vertical.
+    final r = filter.process(-e.z, -e.x, dt);
+    _accX += invertX ? -r.dx : r.dx;
+    _accY += invertY ? -r.dy : r.dy;
 
-    // Le reste fractionnaire est gardé pour l'envoi suivant (sinon les petits
-    // mouvements lents seraient perdus).
-    dx += _remX;
-    dy += _remY;
-    final ix = dx.round();
-    final iy = dy.round();
-    _remX = dx - ix;
-    _remY = dy - iy;
-
-    if (ix != 0 || iy != 0) link.sendMove(ix, iy);
+    // On envoie par petits groupes. Le reste fractionnaire (ex. 0,4 px) reste
+    // dans l'accumulateur pour l'envoi suivant : aucun petit mouvement n'est perdu.
+    final now = _clock.elapsedMilliseconds;
+    if (now - _lastSendMs < _sendEveryMs) return;
+    _lastSendMs = now;
+    final ix = _accX.round();
+    final iy = _accY.round();
+    if (ix == 0 && iy == 0) return;
+    _accX -= ix;
+    _accY -= iy;
+    link.sendMove(ix, iy);
   }
 
   @override
