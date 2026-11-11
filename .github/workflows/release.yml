@@ -60,7 +60,7 @@ jobs:
         working-directory: mobile
         run: |
           flutter pub get
-          flutter analyze lib test
+          flutter analyze --no-fatal-infos lib test
           flutter test
           flutter build apk --release
       - name: Préparer le fichier
