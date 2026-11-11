@@ -147,6 +147,21 @@ donnée par le capteur lui-même, et les mouvements sont envoyés par petits gro
 Arrives-tu à viser un petit bouton avec le laser ? Si le gyro ne répond plus du tout, la barre d'état
 affiche « Gyroscope indisponible » : préviens-moi avec le message exact.
 
+## Utiliser PandaPointer avec le partage de connexion de ton téléphone
+
+Pratique quand il n'y a pas de Wi-Fi : le PC portable se connecte au point d'accès Wi-Fi de ton téléphone.
+
+1. Sur le téléphone : active le **partage de connexion Wi-Fi** (point d'accès).
+2. Sur le PC : connecte-toi à ce Wi-Fi.
+3. **Une seule fois sur le PC** : Windows classe souvent ce réseau en « Public » et bloque alors tout ce qui arrive. Deux solutions (une suffit) :
+   - Paramètres → Réseau et Internet → Wi-Fi → clique sur le réseau du téléphone → Type de profil réseau : **Privé** ;
+   - ou, dans PowerShell **ouvert en administrateur** :
+     `New-NetFirewallRule -DisplayName "PandaPointer (UDP 4210)" -Direction Inbound -Protocol UDP -LocalPort 4210 -Action Allow -Profile Any`
+4. Sur le PC : `cargo run` dans `pc-companion`.
+5. Sur le téléphone : appuie sur **Chercher mon PC**. Il le trouve tout seul et se connecte (l'adresse IP du PC change à chaque fois sur un partage de connexion, c'est pour ça que la recherche est utile).
+
+Si rien n'est trouvé : le programme tourne-t-il ? le PC est-il bien sur le Wi-Fi du téléphone ? la règle de pare-feu est-elle faite ? Tu peux aussi taper l'adresse à la main (la dernière utilisée est retenue).
+
 ## Limites connues (volontaires)
 
 - Aucune sécurité : toute personne sur ton Wi-Fi qui connaît l'IP pourrait envoyer des messages. À utiliser chez toi.

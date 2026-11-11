@@ -57,7 +57,15 @@ fn main() {
     run(&socket, cursor.as_mut());
 }
 
+/// Nom du PC, montré dans l'appli du téléphone quand elle cherche (« PC_PANDA »...).
+fn pc_name() -> String {
+    std::env::var("COMPUTERNAME")
+        .or_else(|_| std::env::var("HOSTNAME"))
+        .unwrap_or_else(|_| "PC".to_string())
+}
+
 fn run(socket: &UdpSocket, cursor: &mut dyn Cursor) {
+    let here = protocol::here_packet(&pc_name());
     let mut buf = [0u8; 64];
     let mut last_seq: Option<u16> = None;
     let mut left_down = false;
@@ -66,10 +74,16 @@ fn run(socket: &UdpSocket, cursor: &mut dyn Cursor) {
 
     loop {
         match socket.recv_from(&mut buf) {
-            Ok((len, _from)) => {
+            Ok((len, from)) => {
                 let Some(packet) = protocol::parse(&buf[..len]) else {
                     continue; // ticket incompréhensible : on l'ignore
                 };
+                // « Y a-t-il un PC ici ? » : on répond tout de suite. Ce ticket n'entre pas dans
+                // le suivi des numéros : il vient d'une autre « porte » du téléphone (recherche).
+                if packet.event == Event::Hello {
+                    let _ = socket.send_to(&here, from);
+                    continue;
+                }
                 if !protocol::is_newer(last_seq, packet.seq) {
                     continue; // ticket en retard ou doublon
                 }
@@ -117,6 +131,7 @@ fn run(socket: &UdpSocket, cursor: &mut dyn Cursor) {
                         }
                     }
                     Event::Slide(action) => cursor.slide(action),
+                    Event::Hello => {} // déjà traité plus haut
                     Event::Laser { on } => {
                         // Le téléphone renvoie « allumé » chaque seconde pour dire qu'il est toujours là.
                         // Si le laser est déjà allumé, on ne fait rien : le rallumer le replacerait

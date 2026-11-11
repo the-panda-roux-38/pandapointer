@@ -3,11 +3,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pandapointer/main.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   testWidgets('les 3 onglets s\'affichent, le mode gyro continu se règle',
       (tester) async {
+    SharedPreferences.setMockInitialValues({'last_ip': '192.168.43.7'});
     await tester.pumpWidget(const PandaPointerApp());
+    await tester.pump();
+    // La dernière adresse utilisée est retrouvée, et le bouton de recherche est là.
+    expect(find.text('192.168.43.7'), findsOneWidget);
+    expect(find.text('Chercher mon PC'), findsOneWidget);
     expect(find.text('Maintiens pour bouger'), findsOneWidget);
 
     await tester.tap(find.text('Pavé'));

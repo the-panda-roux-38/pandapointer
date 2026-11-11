@@ -16,6 +16,9 @@
 //!                                              6 = notifications, 7 = bureau virtuel à gauche,
 //!                                              8 = bureau virtuel à droite
 //!   type 6  ZOOM      (5 octets)  [3..5] crans de zoom (i16) : positif = zoom avant
+//!   type 8  HELLO     (3 octets)  « y a-t-il un PC PandaPointer ici ? » : envoyé par le téléphone, en
+//!                                 diffusion sur le réseau. Le PC répond par un ticket de type 9.
+//!   type 9  ICI       (4+ octets) réponse du PC : [3] longueur du nom, puis le nom du PC (UTF-8)
 //!   type 7  LASER     (4 octets)  [3] 1 = allumer le laser, 0 = l'éteindre. Tant qu'il est allumé,
 //!                                 les MOUVEMENTS déplacent le point laser et non le curseur.
 //!
@@ -38,6 +41,8 @@ const TYPE_SLIDE: u8 = 4;
 const TYPE_GESTURE: u8 = 5;
 const TYPE_ZOOM: u8 = 6;
 const TYPE_LASER: u8 = 7;
+const TYPE_HELLO: u8 = 8;
+const TYPE_HERE: u8 = 9;
 
 /// Garde-fou : un seul ticket ne peut jamais zoomer de plus que ça (en crans).
 pub const MAX_ZOOM: i16 = 10;
@@ -82,6 +87,8 @@ pub enum Event {
     Gesture(GestureAction),
     Zoom { steps: i16 },
     Laser { on: bool },
+    /// Le téléphone cherche un PC : on répond (voir `here_packet`), sans toucher à la souris.
+    Hello,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -134,6 +141,7 @@ pub fn parse(buf: &[u8]) -> Option<Packet> {
             };
             Some(Packet { seq, event: Event::Gesture(action) })
         }
+        TYPE_HELLO if buf.len() == 3 => Some(Packet { seq, event: Event::Hello }),
         TYPE_LASER if buf.len() == 4 => match buf[3] {
             0 => Some(Packet { seq, event: Event::Laser { on: false } }),
             1 => Some(Packet { seq, event: Event::Laser { on: true } }),
@@ -155,6 +163,20 @@ pub fn parse(buf: &[u8]) -> Option<Packet> {
         }
         _ => None,
     }
+}
+
+/// La réponse du PC à un HELLO : son nom, pour que le téléphone l'affiche
+/// (utile quand plusieurs PC sont sur le même réseau).
+pub fn here_packet(name: &str) -> Vec<u8> {
+    // Au plus 60 octets de nom, coupés sur une limite de caractère pour rester de l'UTF-8 valide.
+    let mut end = name.len().min(60);
+    while !name.is_char_boundary(end) {
+        end -= 1;
+    }
+    let bytes = &name.as_bytes()[..end];
+    let mut out = vec![TYPE_HERE, 0, 0, bytes.len() as u8];
+    out.extend_from_slice(bytes);
+    out
 }
 
 /// Le Wi-Fi peut livrer les tickets dans le désordre (c'est le principe de l'UDP).
@@ -200,6 +222,20 @@ mod tests {
 
         let p = parse(&[4, 5, 0, 1]).unwrap();
         assert_eq!(p.event, Event::Slide(SlideAction::Next));
+    }
+
+    #[test]
+    fn hello_and_here() {
+        let p = parse(&[8, 0, 0]).unwrap();
+        assert_eq!(p.event, Event::Hello);
+        assert!(parse(&[8, 0, 0, 1]).is_none()); // un HELLO ne porte rien
+        // Mêmes octets vérifiés côté téléphone (discovery_test.dart).
+        assert_eq!(here_packet("PC_PANDA"), [9, 0, 0, 8, b'P', b'C', b'_', b'P', b'A', b'N', b'D', b'A']);
+        // Nom trop long : coupé sans casser un caractère accentué.
+        let long = "é".repeat(100);
+        let pkt = here_packet(&long);
+        assert!(pkt[3] as usize <= 60);
+        assert!(std::str::from_utf8(&pkt[4..]).is_ok());
     }
 
     #[test]

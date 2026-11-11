@@ -18,6 +18,8 @@ const int kTypeSlide = 4;
 const int kTypeGesture = 5;
 const int kTypeZoom = 6;
 const int kTypeLaser = 7;
+const int kTypeHello = 8;
+const int kTypeHere = 9;
 
 enum MouseButton { left, right }
 
@@ -80,6 +82,14 @@ class Packets {
     d.setUint8(0, kTypeGesture);
     d.setUint16(1, seq, Endian.little);
     d.setUint8(3, action.index + 1);
+    return d.buffer.asUint8List();
+  }
+
+  /// « Y a-t-il un PC PandaPointer ici ? » (recherche automatique).
+  static Uint8List hello(int seq) {
+    final d = ByteData(3);
+    d.setUint8(0, kTypeHello);
+    d.setUint16(1, seq, Endian.little);
     return d.buffer.asUint8List();
   }
 

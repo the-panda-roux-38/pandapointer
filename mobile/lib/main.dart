@@ -5,7 +5,9 @@
 // visible quel que soit l'onglet.
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import 'discovery.dart';
 import 'gyro_page.dart';
 import 'gyro_pointer.dart';
 import 'link.dart';
@@ -49,6 +51,78 @@ class _HomePageState extends State<HomePage>
     super.initState();
     // Le mode "toujours actif" du gyro n'a de sens que sur l'onglet Slides.
     _tabs.addListener(() => _pointer.slidesMode = _tabs.index == 2);
+    _loadLastIp();
+  }
+
+  static const _ipKey = 'last_ip';
+  bool _searching = false;
+
+  /// Retrouve la dernière adresse utilisée (pratique sur le Wi-Fi de la maison).
+  Future<void> _loadLastIp() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final ip = prefs.getString(_ipKey);
+      if (ip != null && _ip.text.isEmpty && mounted) _ip.text = ip;
+    } catch (_) {
+      // Pas grave : on tapera l'adresse.
+    }
+  }
+
+  Future<void> _connectTo(String ip) async {
+    _ip.text = ip;
+    _link.connect(ip);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_ipKey, ip.trim());
+    } catch (_) {}
+  }
+
+  void _snack(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+          SnackBar(content: Text(msg), duration: const Duration(seconds: 6)));
+  }
+
+  /// Le téléphone appelle, le PC répond : plus besoin de connaître son adresse IP.
+  Future<void> _search() async {
+    setState(() => _searching = true);
+    List<FoundPc> pcs;
+    try {
+      pcs = await discoverPcs();
+    } catch (_) {
+      pcs = const [];
+    }
+    if (!mounted) return;
+    setState(() => _searching = false);
+
+    if (pcs.isEmpty) {
+      _snack('Aucun PC trouvé. Vérifie que le programme tourne sur le PC '
+          '(cargo run), que le PC est sur le même réseau (ou connecté à ton '
+          'partage de connexion) et que le pare-feu Windows autorise le port 4210 '
+          '(voir le README).');
+      return;
+    }
+    FoundPc? chosen = pcs.first;
+    if (pcs.length > 1) {
+      chosen = await showDialog<FoundPc>(
+        context: context,
+        builder: (context) => SimpleDialog(
+          title: const Text('Quel PC ?'),
+          children: [
+            for (final pc in pcs)
+              SimpleDialogOption(
+                onPressed: () => Navigator.pop(context, pc),
+                child: Text('${pc.name}  (${pc.address.address})'),
+              ),
+          ],
+        ),
+      );
+    }
+    if (chosen == null) return;
+    await _connectTo(chosen.address.address);
+    _snack('PC trouvé : ${chosen.name}');
   }
 
   @override
@@ -86,10 +160,25 @@ class _HomePageState extends State<HomePage>
                 FilledButton(
                   onPressed: _link.connected
                       ? _link.disconnect
-                      : () => _link.connect(_ip.text),
+                      : () => _connectTo(_ip.text),
                   child: Text(_link.connected ? 'Déconnecter' : 'Connecter'),
                 ),
               ]),
+              if (!_link.connected)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: _searching ? null : _search,
+                    icon: _searching
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.search),
+                    label:
+                        Text(_searching ? 'Recherche...' : 'Chercher mon PC'),
+                  ),
+                ),
               const SizedBox(height: 4),
               Align(
                 alignment: Alignment.centerLeft,

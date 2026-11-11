@@ -10,6 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
   sensors_plus: ^6.1.1
+  shared_preferences: ^2.3.0
 
 dev_dependencies:
   flutter_test:
