@@ -13,6 +13,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'link.dart';
+import 'theme.dart';
+import 'widgets.dart';
 
 class TouchpadPage extends StatefulWidget {
   const TouchpadPage({super.key, required this.link});
@@ -361,10 +363,9 @@ class _TouchpadPageState extends State<TouchpadPage> {
 
   @override
   Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme;
     final active = _fingers.isNotEmpty;
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
       child: Column(
         children: [
           Expanded(
@@ -377,99 +378,117 @@ class _TouchpadPageState extends State<TouchpadPage> {
               child: Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: active
-                      ? color.primaryContainer
-                      : color.surfaceContainerHighest,
+                  gradient: RadialGradient(
+                    center: const Alignment(0, -0.4),
+                    radius: 1.1,
+                    colors: active
+                        ? const [Color(0xFF3A2D25), Color(0xFF241C17)]
+                        : const [Color(0xFF2A211B), Pp.panel],
+                  ),
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: color.outlineVariant),
+                  border: Border.all(
+                      color: active ? Pp.accent : Pp.edge,
+                      width: active ? 2 : 1),
+                  boxShadow: const [
+                    BoxShadow(color: Pp.depth, offset: Offset(0, 6)),
+                  ],
                 ),
                 alignment: Alignment.center,
                 child: Padding(
                   padding: const EdgeInsets.all(24),
-                  child: Text(
-                    active
-                        ? '${_fingers.length} doigt${_fingers.length > 1 ? 's' : ''}'
-                        : '1 doigt : bouger · tap = clic\n'
-                            'double-tap + glisser = cliquer-glisser\n\n'
-                            '2 doigts : scroll · pincer = zoom\n'
-                            'tap = clic droit\n\n'
-                            '3 doigts : balayer = vue des tâches, bureau, appli\n'
-                            '4 doigts : balayer = changer de bureau',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: color.onSurfaceVariant,
-                      fontSize: active ? 28 : 15,
-                      height: 1.4,
-                    ),
-                  ),
+                  child: active
+                      ? Text(
+                          '${_fingers.length} doigt${_fingers.length > 1 ? 's' : ''}',
+                          style: ppMono(color: Pp.accent, size: 30),
+                        )
+                      : const Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _Hint('1 DOIGT',
+                                'bouger · tap = clic\ndouble-tap + glisser = cliquer-glisser'),
+                            _Hint('2 DOIGTS',
+                                'scroll · pincer = zoom · tap = clic droit'),
+                            _Hint('3 DOIGTS',
+                                'balayer = vue des tâches, bureau, appli'),
+                            _Hint('4 DOIGTS', 'balayer = changer de bureau'),
+                          ],
+                        ),
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           Row(children: [
             Expanded(
-              child: FilledButton.tonal(
-                onPressed: () => _link.sendClick(MouseButton.left),
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 18),
-                  child: Text('Clic gauche'),
-                ),
+              child: RaisedKey(
+                label: 'CLIC GAUCHE',
+                height: 60,
+                onTap: () => _link.sendClick(MouseButton.left),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 12),
             Expanded(
-              child: FilledButton.tonal(
-                onPressed: () => _link.sendClick(MouseButton.right),
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 18),
-                  child: Text('Clic droit'),
-                ),
+              child: RaisedKey(
+                label: 'CLIC DROIT',
+                height: 60,
+                onTap: () => _link.sendClick(MouseButton.right),
               ),
             ),
           ]),
-          ExpansionTile(
-            tilePadding: EdgeInsets.zero,
-            title: const Text('Réglages du pavé'),
-            children: [
-              Row(children: [
-                SizedBox(
-                    width: 110,
-                    child: Text('Vitesse ${_speed.toStringAsFixed(1)}')),
-                Expanded(
-                  child: Slider(
-                    value: _speed,
-                    min: 0.5,
-                    max: 4,
-                    onChanged: (v) => setState(() => _speed = v),
-                  ),
+          Theme(
+            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+            child: ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              iconColor: Pp.accent,
+              collapsedIconColor: Pp.muted,
+              title: Text('RÉGLAGES DU PAVÉ', style: ppLabel()),
+              children: [
+                SegGauge(
+                  label: 'Vitesse',
+                  display: _speed.toStringAsFixed(1),
+                  value: (_speed - 0.5) / 3.5,
+                  onChanged: (v) => setState(() => _speed = 0.5 + v * 3.5),
                 ),
-              ]),
-              Row(children: [
-                SizedBox(
-                    width: 110,
-                    child: Text('Accélération ${(_accel * 100).round()}%')),
-                Expanded(
-                  child: Slider(
-                    value: _accel,
-                    min: 0,
-                    max: 1,
-                    onChanged: (v) => setState(() => _accel = v),
-                  ),
+                SegGauge(
+                  label: 'Accélération',
+                  display: '${(_accel * 100).round()} %',
+                  value: _accel,
+                  onChanged: (v) => setState(() => _accel = v),
                 ),
-              ]),
-              SwitchListTile(
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Scroll naturel'),
-                subtitle: const Text('Doigts vers le haut = la page monte'),
-                value: _naturalScroll,
-                onChanged: (v) => setState(() => _naturalScroll = v),
-              ),
-            ],
+                PpSwitchRow(
+                  label: 'Scroll naturel',
+                  hint: 'Doigts vers le haut = la page monte',
+                  value: _naturalScroll,
+                  onChanged: (v) => setState(() => _naturalScroll = v),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
+}
+
+/// Une ligne d'aide sur le pavé : « 2 DOIGTS » + ce qu'on peut faire.
+class _Hint extends StatelessWidget {
+  const _Hint(this.title, this.body);
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: ppLabel(color: Pp.accent)),
+            const SizedBox(height: 2),
+            Text(body,
+                style: const TextStyle(
+                    color: Pp.muted, fontSize: 14, height: 1.35)),
+          ],
+        ),
+      );
 }

@@ -11,6 +11,10 @@ dependencies:
     sdk: flutter
   sensors_plus: ^6.1.1
   shared_preferences: ^2.3.0
+  pointycastle: ^3.9.1
+  crypto: ^3.0.6
+  flutter_svg: ^2.0.10
+  mobile_scanner: ^7.0.0
 
 dev_dependencies:
   flutter_test:
@@ -19,3 +23,16 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/icons/
+  fonts:
+    - family: SpaceGrotesk
+      fonts:
+        - asset: assets/fonts/SpaceGrotesk-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/SpaceGrotesk-Bold.ttf
+          weight: 700
+    - family: JetBrainsMono
+      fonts:
+        - asset: assets/fonts/JetBrainsMono-Medium.ttf
+          weight: 500

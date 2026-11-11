@@ -5,6 +5,12 @@ edition = "2021"
 description = "Programme compagnon PandaPointer : reçoit les mouvements du téléphone et pilote la souris du PC"
 
 [dependencies]
+# Sécurité : chiffrement des tickets, clés d'appairage, QR code.
+chacha20poly1305 = "0.10"
+hmac = "0.12"
+sha2 = "0.10"
+getrandom = "0.2"
+qrcode = { version = "0.14", default-features = false }
 
 # La vraie souris n'est pilotée que sous Windows et Mac.
 # Ailleurs (Linux, par exemple pour les tests), on utilise le mode test sans souris.
@@ -16,6 +22,20 @@ enigo = "0.5"
 windows-sys = { version = "0.59", features = [
     "Win32_Foundation",
     "Win32_Graphics_Gdi",
+    "Win32_Security",
     "Win32_System_LibraryLoader",
+    "Win32_System_Registry",
+    "Win32_UI_Shell",
     "Win32_UI_WindowsAndMessaging",
 ] }
+
+# Icône du programme (le panda dans l'explorateur de fichiers) : intégrée à l'.exe sous Windows.
+[target.'cfg(windows)'.build-dependencies]
+winresource = "0.1"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"

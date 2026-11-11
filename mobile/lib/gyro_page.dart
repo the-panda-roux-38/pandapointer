@@ -1,129 +1,117 @@
-// Onglet "Gyro" : tant que tu maintiens le gros bouton, la rotation du
+// Onglet "Gyro" : tant que tu maintiens la molette, la rotation du
 // téléphone déplace le curseur. La logique est dans gyro_pointer.dart.
 
 import 'package:flutter/material.dart';
 
 import 'gyro_pointer.dart';
 import 'link.dart';
+import 'theme.dart';
+import 'widgets.dart';
 
 class GyroPage extends StatelessWidget {
   const GyroPage({super.key, required this.link, required this.pointer});
   final Link link;
   final GyroPointer pointer;
 
-  Widget _holdArea(BuildContext context) {
-    final color = Theme.of(context).colorScheme;
-    final moving = pointer.holding;
-    return Listener(
-      onPointerDown: (_) => pointer.holding = true,
-      onPointerUp: (_) => pointer.holding = false,
-      onPointerCancel: (_) => pointer.holding = false,
-      child: Container(
-        height: 220,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: moving ? color.primary : color.primaryContainer,
-          borderRadius: BorderRadius.circular(24),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          moving ? 'Je bouge !' : 'Maintiens pour bouger',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w600,
-            color: moving ? color.onPrimary : color.onPrimaryContainer,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _clickButton(BuildContext context, String label, MouseButton button) {
-    final color = Theme.of(context).colorScheme;
-    return Expanded(
-      child: Listener(
-        onPointerDown: (_) {
-          if (link.connected) link.sendButton(button, true);
-        },
-        onPointerUp: (_) {
-          if (link.connected) link.sendButton(button, false);
-        },
-        onPointerCancel: (_) {
-          if (link.connected) link.sendButton(button, false);
-        },
-        child: Container(
-          height: 80,
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          decoration: BoxDecoration(
-            color: color.secondaryContainer,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          alignment: Alignment.center,
-          child: Text(label, style: const TextStyle(fontSize: 18)),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: pointer,
       builder: (context, _) => ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
         children: [
-          _holdArea(context),
-          const SizedBox(height: 12),
-          Row(children: [
-            _clickButton(context, 'Clic gauche', MouseButton.left),
-            _clickButton(context, 'Clic droit', MouseButton.right),
-          ]),
-          const SizedBox(height: 16),
-          Text('Sensibilité : ${pointer.sensitivity.round()}'),
-          Slider(
-            value: pointer.sensitivity,
-            min: 200,
-            max: 2000,
-            onChanged: (v) => pointer.update(() => pointer.sensitivity = v),
-          ),
-          Text('Stabilité : ${(pointer.stability * 100).round()} %'),
-          Slider(
-            value: pointer.stability,
-            onChanged: (v) => pointer.update(() => pointer.stability = v),
-          ),
-          Text(
-            'Plus c\'est haut, moins le curseur tremble quand tu bouges à peine. '
-            'Trop haut, il peut sembler un peu mou sur les mouvements lents.',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
           const SizedBox(height: 8),
-          Text(
-              'Précision petits mouvements : ${(pointer.precision * 100).round()} %'),
-          Slider(
-            value: pointer.precision,
-            onChanged: (v) => pointer.update(() => pointer.precision = v),
+          Center(
+            child: Listener(
+              onPointerDown: (_) => pointer.holding = true,
+              onPointerUp: (_) => pointer.holding = false,
+              onPointerCancel: (_) => pointer.holding = false,
+              child: HoldDial(
+                active: pointer.holding,
+                label: pointer.holding ? 'Je bouge !' : 'Maintiens pour bouger',
+              ),
+            ),
           ),
-          Text(
-            'Plus c\'est haut, plus les gestes lents sont démultipliés (on vise au pixel près). '
-            'Les gestes rapides ne changent pas.',
-            style: Theme.of(context).textTheme.bodySmall,
+          const SizedBox(height: 28),
+          Row(children: [
+            Expanded(
+              child: RaisedKey(
+                label: 'CLIC GAUCHE',
+                onDown: () => link.sendButton(MouseButton.left, true),
+                onUp: () => link.sendButton(MouseButton.left, false),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: RaisedKey(
+                label: 'CLIC DROIT',
+                onDown: () => link.sendButton(MouseButton.right, true),
+                onUp: () => link.sendButton(MouseButton.right, false),
+              ),
+            ),
+          ]),
+          const SizedBox(height: 14),
+          PpPanel(
+            child: Column(
+              children: [
+                SegGauge(
+                  label: 'Sensibilité',
+                  display: '${pointer.sensitivity.round()}',
+                  value: (pointer.sensitivity - 200) / 1800,
+                  onChanged: (v) => pointer
+                      .update(() => pointer.sensitivity = 200 + v * 1800),
+                ),
+                SegGauge(
+                  label: 'Stabilité',
+                  display: '${(pointer.stability * 100).round()} %',
+                  value: pointer.stability,
+                  onChanged: (v) => pointer.update(() => pointer.stability = v),
+                ),
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 10),
+                  child: Text(
+                    'Plus la stabilité est haute, moins le curseur tremble quand tu bouges à peine. '
+                    'Trop haut, il peut sembler un peu mou sur les mouvements lents.',
+                    style: TextStyle(color: Pp.muted, fontSize: 12),
+                  ),
+                ),
+                SegGauge(
+                  label: 'Précision',
+                  display: '${(pointer.precision * 100).round()} %',
+                  value: pointer.precision,
+                  onChanged: (v) => pointer.update(() => pointer.precision = v),
+                ),
+                const Text(
+                  'Plus c\'est haut, plus les gestes lents sont démultipliés (on vise au pixel près). '
+                  'Les gestes rapides ne changent pas.',
+                  style: TextStyle(color: Pp.muted, fontSize: 12),
+                ),
+              ],
+            ),
           ),
-          SwitchListTile(
-            title: const Text('Inverser horizontal'),
-            value: pointer.invertX,
-            onChanged: (v) => pointer.update(() => pointer.invertX = v),
-          ),
-          SwitchListTile(
-            title: const Text('Inverser vertical'),
-            value: pointer.invertY,
-            onChanged: (v) => pointer.update(() => pointer.invertY = v),
+          const SizedBox(height: 14),
+          PpPanel(
+            child: Column(
+              children: [
+                PpSwitchRow(
+                  label: 'Inverser horizontal',
+                  value: pointer.invertX,
+                  onChanged: (v) => pointer.update(() => pointer.invertX = v),
+                ),
+                const SizedBox(height: 4),
+                PpSwitchRow(
+                  label: 'Inverser vertical',
+                  value: pointer.invertY,
+                  onChanged: (v) => pointer.update(() => pointer.invertY = v),
+                ),
+              ],
+            ),
           ),
           Align(
             alignment: Alignment.centerLeft,
-            child: TextButton.icon(
+            child: TextButton(
               onPressed: pointer.recalibrate,
-              icon: const Icon(Icons.restart_alt),
-              label: const Text('Recalibrer le zéro du capteur'),
+              child: const Text('RECALIBRER LE ZÉRO DU CAPTEUR'),
             ),
           ),
         ],

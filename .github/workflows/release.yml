@@ -1,0 +1,87 @@
+# Fabrique le programme PC (.exe) et l'appli Android (.apk) et les publie sur GitHub.
+# Déclenchement : quand tu pousses une étiquette « v0.1.0 », « v0.2.0 »... (git tag v0.1.0 && git push --tags)
+# ou à la main depuis l'onglet Actions.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  pc:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: pc-companion
+      - name: Tests
+        working-directory: pc-companion
+        run: cargo test
+      - name: Compilation
+        working-directory: pc-companion
+        run: cargo build --release
+      - name: Préparer le fichier
+        run: Copy-Item pc-companion/target/release/pandapointer-pc.exe PandaPointer-PC.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pc
+          path: PandaPointer-PC.exe
+
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Clé de signature (si tu l'as ajoutée dans les secrets du dépôt)
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > mobile/android/release.jks
+            printf 'storeFile=release.jks\nstorePassword=%s\nkeyAlias=pandapointer\nkeyPassword=%s\n' "$KEYSTORE_PASSWORD" "$KEYSTORE_PASSWORD" > mobile/android/key.properties
+          else
+            echo "Pas de clé de signature : l'APK sera signé avec la clé de debug."
+          fi
+      - name: Tests et APK
+        working-directory: mobile
+        run: |
+          flutter pub get
+          flutter analyze lib test
+          flutter test
+          flutter build apk --release
+      - name: Préparer le fichier
+        run: cp mobile/build/app/outputs/flutter-apk/app-release.apk PandaPointer.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: PandaPointer.apk
+
+  publish:
+    needs: [pc, android]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/PandaPointer-PC.exe
+            dist/PandaPointer.apk
+          generate_release_notes: true

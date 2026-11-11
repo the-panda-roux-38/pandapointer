@@ -1,77 +1,94 @@
-# PandaPointer : étape 2, pavé tactile, scroll et slides
+# PandaPointer
 
-**Étape 2 :** l'appli a maintenant 3 onglets (Gyro, Pavé, Slides). Voir la section « Étape 2 » plus bas
-pour savoir quoi tester. Le reste de ce guide (installation, lancement) est inchangé.
-
-**But de l'étape 1 (déjà validée) :** vérifier la sensation. Tu penches le téléphone, le curseur bouge,
-et on regarde si c'est fluide. Pas d'appairage, pas de design, pas de sécurité : ça viendra après,
-quand on saura que le cœur du projet tient la route.
-
-## Ce qu'il y a dans le dossier
+Ton téléphone Android devient la souris de ton PC Windows : gyroscope, pavé tactile avec les gestes
+Windows, scroll, zoom, télécommande de diaporama et pointeur laser. Tout passe par ton Wi-Fi, chiffré.
 
 ```
 PandaPointer/
-├── pc-companion/   Programme du PC (Rust) : reçoit les messages et bouge la souris
-└── mobile/         Appli du téléphone (Flutter) : lit le gyroscope et envoie les messages
+├── pc-companion/   Programme du PC (Rust) : icône dans la barre des tâches, bouge la souris
+├── mobile/         Appli du téléphone (Flutter)
+├── assets/         Icône du panda roux (+ le script qui la dessine)
+└── .github/        Fabrication automatique du .exe et de l'APK
 ```
 
-Comment ça parle : le téléphone envoie de petits messages en **UDP** par le Wi-Fi.
-L'UDP, c'est lancer des cartes postales : très rapide, mais aucune garantie qu'elles arrivent
-toutes, ni dans l'ordre. Pour un curseur, c'est parfait (un mouvement perdu sur cinquante,
-personne ne le voit), alors qu'un appel téléphonique (TCP) ferait attendre le curseur à chaque
-perte. La forme exacte des messages est décrite en tête de `pc-companion/src/protocol.rs`.
+## Installer (sans rien compiler)
 
-## 1. Installer les outils (une seule fois)
+1. Va dans **Releases** sur GitHub et télécharge `PandaPointer-PC.exe` et `PandaPointer.apk`.
+2. **PC** : double-clique `PandaPointer-PC.exe`. Un panda apparaît près de l'horloge (clique sur `^` s'il est
+   caché). La première fois, Windows demande d'autoriser le pare-feu : accepte pour les **réseaux privés**.
+   Windows Defender SmartScreen peut dire « application non reconnue » : *Informations complémentaires* → *Exécuter quand même*
+   (le programme n'est pas signé, ça coûte cher).
+3. **Téléphone** : ouvre `PandaPointer.apk` (autorise « installer des applications inconnues » pour ton navigateur
+   ou ton gestionnaire de fichiers, une seule fois).
+4. **Appairer** : au premier lancement le PC affiche un QR code. Dans l'appli, touche *Scanner le QR code*.
+   Plus tard : clic sur le panda → *Appairer un téléphone…*. C'est fait une fois pour toutes :
+   ensuite l'appli retrouve le PC toute seule et se reconnecte après une coupure.
+
+Le menu du panda : état de la connexion, *Appairer un téléphone…*, *Téléphones appairés* (pour en oublier un),
+*Lancer avec Windows*, *Quitter*.
+
+## Sécurité, en bref
+
+Chaque téléphone appairé a sa propre clé secrète (dans le QR code, valable 5 minutes, à ne pas photographier
+ni partager). Les messages sont chiffrés (ChaCha20-Poly1305) et protégés contre le rejeu : quelqu'un sur le même
+Wi-Fi ne peut ni te piloter la souris, ni rejouer tes gestes. Les clés du PC sont dans `%APPDATA%\PandaPointer\devices.txt`.
+Pour retirer un téléphone : menu du panda → *Téléphones appairés* → *Oublier*.
+
+## Fabriquer les versions (pour toi)
+
+Le fichier `.github/workflows/release.yml` fabrique le `.exe` et l'APK sur GitHub.
+
+```
+git tag v0.1.0
+git push --tags
+```
+
+Après quelques minutes, une *Release* apparaît avec les deux fichiers.
+
+**Signature de l'APK (recommandé, une seule fois).** Sans clé, l'APK est signé avec une clé de test : ça marche,
+mais une mise à jour future exigera de désinstaller l'ancienne version. Pour avoir une vraie clé :
+
+```
+keytool -genkeypair -v -keystore release.jks -alias pandapointer -keyalg RSA -keysize 2048 -validity 10000
+```
+
+Puis sur GitHub : *Settings → Secrets and variables → Actions* : ajoute `ANDROID_KEYSTORE_PASSWORD`
+(le mot de passe choisi, identique pour le magasin et la clé) et `ANDROID_KEYSTORE_B64`
+(le contenu de `release.jks` en base64 : `[Convert]::ToBase64String([IO.File]::ReadAllBytes("release.jks"))`).
+**Garde `release.jks` en lieu sûr, hors du dépôt** : si tu le perds, tu ne pourras plus mettre à jour l'appli installée.
+
+## Développer
 
 | Outil | Pourquoi | Où |
 | --- | --- | --- |
-| Rust | Compiler le programme du PC | https://rustup.rs (accepte l'installation des « Build Tools Visual Studio » si elle est proposée) |
-| Flutter | Compiler l'appli mobile | https://docs.flutter.dev/install (choisis Windows puis Android) |
-| Android Studio | Fournit les outils Android à Flutter | https://developer.android.com/studio |
+| Rust | Compiler le programme du PC | https://rustup.rs |
+| Flutter + Android Studio | Compiler l'appli | https://docs.flutter.dev/install |
 
-Ensuite, dans un terminal : `flutter doctor`. Il liste ce qui manque encore, une ligne par problème.
-Tout doit être vert pour la partie Android.
-
-Sur ton téléphone Android : Paramètres → À propos → touche 7 fois « Numéro de build »
-(ça active le mode développeur), puis active le **débogage USB**.
-
-## 2. Lancer le programme du PC
+PC :
 
 ```
 cd pc-companion
-cargo run -- --dry-run
+cargo run -- --pair             # avec icône ; --pair montre aussi le QR dans la console
+cargo run -- --dry-run --no-tray   # console seule, la souris ne bouge pas
+cargo test
 ```
 
-`--dry-run` = mode test : le programme affiche ce qu'il ferait sans toucher à ta souris.
-Il t'indique l'adresse IP à taper dans l'appli. La première fois, Windows demande
-d'autoriser le pare-feu : accepte pour les **réseaux privés**.
+Options : `--dry-run` (ne bouge pas la souris), `--no-tray` (pas d'icône, console), `--pair` (QR au démarrage),
+`--port 4211`, `--data-dir <dossier>`, `--insecure` (sans chiffrement, **pour les tests uniquement**).
 
-Quand tout marche, relance sans `--dry-run` pour piloter la vraie souris :
-
-```
-cargo run
-```
-
-(Si la souris s'affole : ferme la fenêtre du terminal, ou Ctrl+C.)
-
-## 3. Lancer l'appli du téléphone
-
-PC et téléphone doivent être sur **le même Wi-Fi**.
+Téléphone :
 
 ```
 cd mobile
-flutter create . --platforms=android
 flutter pub get
 flutter run
 ```
 
-`flutter create .` génère les dossiers Android autour de notre code (il ne touche pas à `lib/main.dart`).
-Téléphone branché en USB, `flutter run` installe et lance l'appli.
+Dans la version de développement (USB), l'appli demande aussi le QR code : lance `cargo run -- --pair` sur le PC.
+Messages : de petits paquets UDP décrits en tête de `pc-companion/src/protocol.rs` et `secure.rs`.
 
-Dans l'appli : tape l'IP affichée par le PC → **Connecter** → tiens le téléphone à plat, bord du haut
-pointé vers l'écran → **maintiens** le gros bouton et tourne le poignet.
-
-## 4. Ce que j'aimerais que tu observes
+---
+## Ce que j'aimerais que tu observes
 
 1. **Les axes** : droite = curseur à droite ? haut = curseur en haut ? Sinon, utilise les deux
    interrupteurs « Inverser » (je n'ai pas pu le tester sur un vrai téléphone, c'est le point le plus probable à corriger).

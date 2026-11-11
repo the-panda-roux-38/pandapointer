@@ -19,6 +19,8 @@
 //!   type 8  HELLO     (3 octets)  « y a-t-il un PC PandaPointer ici ? » : envoyé par le téléphone, en
 //!                                 diffusion sur le réseau. Le PC répond par un ticket de type 9.
 //!   type 9  ICI       (4+ octets) réponse du PC : [3] longueur du nom, puis le nom du PC (UTF-8)
+//!   type 13 PING      (3 octets)  le téléphone demande « tu es toujours là ? » (chiffré, 1 fois par seconde)
+//!   type 14 PONG      (3 octets)  réponse du PC (chiffrée). Sans PONG pendant 4 s, le téléphone se reconnecte.
 //!   type 7  LASER     (4 octets)  [3] 1 = allumer le laser, 0 = l'éteindre. Tant qu'il est allumé,
 //!                                 les MOUVEMENTS déplacent le point laser et non le curseur.
 //!
@@ -43,6 +45,11 @@ const TYPE_ZOOM: u8 = 6;
 const TYPE_LASER: u8 = 7;
 const TYPE_HELLO: u8 = 8;
 const TYPE_HERE: u8 = 9;
+const TYPE_PING: u8 = 13;
+const TYPE_PONG: u8 = 14;
+
+/// Réponse du PC à un PING (envoyée chiffrée) : « je suis toujours là ».
+pub const PONG_PACKET: [u8; 3] = [TYPE_PONG, 0, 0];
 
 /// Garde-fou : un seul ticket ne peut jamais zoomer de plus que ça (en crans).
 pub const MAX_ZOOM: i16 = 10;
@@ -89,6 +96,7 @@ pub enum Event {
     Laser { on: bool },
     /// Le téléphone cherche un PC : on répond (voir `here_packet`), sans toucher à la souris.
     Hello,
+    Ping,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -142,6 +150,7 @@ pub fn parse(buf: &[u8]) -> Option<Packet> {
             Some(Packet { seq, event: Event::Gesture(action) })
         }
         TYPE_HELLO if buf.len() == 3 => Some(Packet { seq, event: Event::Hello }),
+        TYPE_PING if buf.len() == 3 => Some(Packet { seq, event: Event::Ping }),
         TYPE_LASER if buf.len() == 4 => match buf[3] {
             0 => Some(Packet { seq, event: Event::Laser { on: false } }),
             1 => Some(Packet { seq, event: Event::Laser { on: true } }),
@@ -222,6 +231,12 @@ mod tests {
 
         let p = parse(&[4, 5, 0, 1]).unwrap();
         assert_eq!(p.event, Event::Slide(SlideAction::Next));
+    }
+
+    #[test]
+    fn ping_parses() {
+        assert_eq!(parse(&[13, 5, 0]).unwrap().event, Event::Ping);
+        assert!(parse(&[13, 5, 0, 1]).is_none());
     }
 
     #[test]
