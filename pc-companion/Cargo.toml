@@ -1,0 +1,12 @@
+[package]
+name = "pandapointer-pc"
+version = "0.1.0"
+edition = "2021"
+description = "Programme compagnon PandaPointer : reçoit les mouvements du téléphone et pilote la souris du PC"
+
+[dependencies]
+
+# La vraie souris n'est pilotée que sous Windows et Mac.
+# Ailleurs (Linux, par exemple pour les tests), on utilise le mode test sans souris.
+[target.'cfg(any(target_os = "windows", target_os = "macos"))'.dependencies]
+enigo = "0.5"
