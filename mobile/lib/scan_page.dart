@@ -83,8 +83,7 @@ class _ScanPageState extends State<ScanPage> {
               width: 250,
               height: 250,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: Pp.accent, width: 3),
+                border: Border.all(color: Pp.accent, width: 4),
               ),
             ),
           ),
@@ -95,8 +94,8 @@ class _ScanPageState extends State<ScanPage> {
             child: Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Pp.bg.withAlpha(220),
-                borderRadius: BorderRadius.circular(14),
+                color: Pp.bg.withAlpha(235),
+                border: Border.all(color: Pp.edge, width: 2),
               ),
               child: Text(
                 _wrongCode ??

@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pandapointer/main.dart';
 import 'package:pandapointer/secure.dart';
 import 'package:pandapointer/storage.dart';
+import 'package:pandapointer/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -55,7 +56,7 @@ void main() {
     await tester.tap(find.text('SLIDES'));
     await tester.pumpAndSettle();
     expect(find.text('SUIVANT'), findsOneWidget);
-    expect(find.text('Maintiens pour pointer'), findsOneWidget);
+    expect(find.text('MAINTIENS POUR POINTER'), findsOneWidget);
 
     // Choix du pointeur : curseur par défaut, laser sélectionnable.
     expect(find.text('Curseur'), findsOneWidget);
@@ -66,7 +67,7 @@ void main() {
     await tester.tap(find.text('Toujours'));
     await tester.pumpAndSettle();
     expect(find.text('Pointeur actif'), findsOneWidget);
-    expect(tester.widget<Switch>(find.byType(Switch)).value, false);
+    expect(tester.widget<PpToggle>(find.byType(PpToggle)).value, false);
   });
 
   testWidgets(

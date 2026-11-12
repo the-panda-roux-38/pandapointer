@@ -1,55 +1,57 @@
-from PIL import Image, ImageDraw
-import sys, os
+"""Fabrique les icônes de PandaPointer à partir de assets/panda.svg (le panda roux de Coche).
 
-ORANGE=(233,98,47,255); DEEP=(190,70,28,255); DARK=(42,24,16,255); WHITE=(246,237,227,255); BG=(23,18,15,255)
+Sorties :
+  assets/icon-1024.png, assets/icon-fg-512.png          (aperçu, source des icônes Android)
+  pc-companion/assets/pandapointer.ico, tray32.rgba     (icône du .exe et de la barre des tâches)
+  mobile/android/app/src/main/res/...                   (icônes du lanceur Android)
+Nécessite : rsvg-convert (librsvg) et Pillow.
+"""
+import io, os, subprocess
+from PIL import Image
 
-def face(size, bg, tray=False):
-    S=size*4
-    im=Image.new("RGBA",(S,S),(0,0,0,0))
-    d=ImageDraw.Draw(im)
-    if bg:
-        d.rounded_rectangle([0,0,S-1,S-1],radius=int(S*0.22),fill=BG)
-        k=0.80; ox=oy=S*(1-k)/2
-    else:
-        k=1.0; ox=oy=0
-    def X(v): return ox+v*S*k
-    def Y(v): return oy+v*S*k
-    def ell(cx,cy,rx,ry,fill):
-        d.ellipse([X(cx-rx),Y(cy-ry),X(cx+rx),Y(cy+ry)],fill=fill)
-    # ears
-    for cx in (0.20,0.80):
-        ell(cx,0.24,0.15,0.15,DEEP)
-        ell(cx,0.25,0.085,0.085,WHITE)
-    # head
-    ell(0.5,0.54,0.42,0.36,ORANGE)
-    # cheeks (white fur)
-    ell(0.27,0.66,0.17,0.13,WHITE)
-    ell(0.73,0.66,0.17,0.13,WHITE)
-    ell(0.5,0.72,0.14,0.11,WHITE)
-    # brow marks
-    ell(0.35,0.40,0.07,0.045,WHITE)
-    ell(0.65,0.40,0.07,0.045,WHITE)
-    # tear stripes
-    for sx in (1,-1):
-        cx=0.5-sx*0.15
-        pts=[(cx-sx*0.0,0.52),(cx-sx*0.03,0.52),(cx-sx*0.11,0.70),(cx-sx*0.07,0.70)]
-        d.polygon([(X(a),Y(b)) for a,b in pts],fill=DEEP)
-    # eyes
-    ell(0.35,0.50,0.05,0.055,DARK)
-    ell(0.65,0.50,0.05,0.055,DARK)
-    if not tray:
-        ell(0.365,0.485,0.014,0.014,WHITE); ell(0.665,0.485,0.014,0.014,WHITE)
-    # nose
-    ell(0.5,0.66,0.055,0.04,DARK)
-    return im.resize((size,size),Image.LANCZOS)
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+BG = (27, 20, 16, 255)  # brun crépuscule #1b1410
 
-out=sys.argv[1]; os.makedirs(out,exist_ok=True)
-# tray raw RGBA 32x32
-t=face(32,False,True)
-open(f"{out}/tray32.rgba","wb").write(t.tobytes())
-face(256,True).save(f"{out}/icon-256.png")
-face(1024,True).save(f"{out}/icon-1024.png")
-face(512,False).save(f"{out}/icon-fg-512.png")
-imgs=[face(s,True) for s in (256,64,48,32,16)]
-imgs[0].save(f"{out}/pandapointer.ico",format="ICO",sizes=[(256,256),(64,64),(48,48),(32,32),(16,16)],append_images=imgs[1:])
+
+def panda(width):
+    png = subprocess.run(["rsvg-convert", "-w", str(width), os.path.join(HERE, "panda.svg")],
+                         check=True, capture_output=True).stdout
+    return Image.open(io.BytesIO(png)).convert("RGBA")
+
+
+def icon(size, bg=True, scale=0.82):
+    base = Image.new("RGBA", (size, size), BG if bg else (0, 0, 0, 0))
+    p = panda(int(size * scale))
+    base.alpha_composite(p, ((size - p.width) // 2, (size - p.height) // 2 + int(size * 0.02)))
+    return base
+
+
+icon(1024).save(os.path.join(HERE, "icon-1024.png"))
+icon(512, bg=False, scale=0.9).save(os.path.join(HERE, "icon-fg-512.png"))
+
+# PC : barre des tâches (32x32 brut, sans fond) et .ico
+pc = os.path.join(ROOT, "pc-companion", "assets")
+os.makedirs(pc, exist_ok=True)
+tray = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
+p = panda(32)
+tray.alpha_composite(p, (0, (32 - p.height) // 2))
+open(os.path.join(pc, "tray32.rgba"), "wb").write(tray.tobytes())
+imgs = [icon(s, scale=0.9) for s in (256, 64, 48, 32, 16)]
+imgs[0].save(os.path.join(pc, "pandapointer.ico"), format="ICO",
+             sizes=[(256, 256), (64, 64), (48, 48), (32, 32), (16, 16)], append_images=imgs[1:])
+
+# Android : icône classique + icône adaptative (premier plan transparent sur fond brun)
+res = os.path.join(ROOT, "mobile", "android", "app", "src", "main", "res")
+for d, s in {"mdpi": 48, "hdpi": 72, "xhdpi": 96, "xxhdpi": 144, "xxxhdpi": 192}.items():
+    os.makedirs(os.path.join(res, f"mipmap-{d}"), exist_ok=True)
+    icon(s, scale=0.9).save(os.path.join(res, f"mipmap-{d}", "ic_launcher.png"))
+os.makedirs(os.path.join(res, "drawable-nodpi"), exist_ok=True)
+fg = Image.new("RGBA", (432, 432), (0, 0, 0, 0))
+pp = panda(250)
+fg.alpha_composite(pp, ((432 - pp.width) // 2, (432 - pp.height) // 2 + 6))
+fg.save(os.path.join(res, "drawable-nodpi", "ic_launcher_foreground.png"))
+os.makedirs(os.path.join(res, "values"), exist_ok=True)
+open(os.path.join(res, "values", "ic_launcher_background.xml"), "w").write(
+    '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">#1B1410</color>\n</resources>\n')
 print("ok")

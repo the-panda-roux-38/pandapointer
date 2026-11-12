@@ -66,21 +66,18 @@ class SlidesPage extends StatelessWidget {
                         height: 64,
                         decoration: BoxDecoration(
                           color: pointer.holding ? Pp.accent : Pp.keyBottom,
-                          borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                              color: pointer.holding ? Pp.accentSoft : Pp.edge),
+                              color: pointer.holding ? Pp.accentDeep : Pp.edge,
+                              width: 2),
                         ),
                         alignment: Alignment.center,
                         child: Text(
                           pointer.holding
-                              ? 'Je pointe !'
-                              : 'Maintiens pour pointer',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 15,
-                            letterSpacing: 1,
-                            color: pointer.holding ? Pp.bg : Pp.text,
-                          ),
+                              ? 'JE POINTE !'
+                              : 'MAINTIENS POUR POINTER',
+                          textAlign: TextAlign.center,
+                          style: ppLabel(color: Pp.text, size: 12)
+                              .copyWith(letterSpacing: 1),
                         ),
                       ),
                     ),

@@ -54,9 +54,8 @@ class _PairingPageState extends State<PairingPage> {
               height: 34,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
                 color: Pp.keyTop,
-                border: Border.all(color: Pp.edge),
+                border: Border.all(color: Pp.edge, width: 2),
               ),
               child: Text(n, style: ppMono(size: 15)),
             ),
@@ -84,7 +83,8 @@ class _PairingPageState extends State<PairingPage> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
       children: [
-        const PpIcon('lock', size: 30, color: Pp.accent),
+        const Align(
+            alignment: Alignment.centerLeft, child: PandaMark(width: 72)),
         const SizedBox(height: 14),
         const Text('Appairer ton PC',
             style: TextStyle(fontWeight: FontWeight.w700, fontSize: 28)),

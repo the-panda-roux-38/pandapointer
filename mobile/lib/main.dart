@@ -202,37 +202,46 @@ class _HomePageState extends State<HomePage>
     return ListenableBuilder(
       listenable: _link,
       builder: (context, _) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 14, 12, 0),
+        padding: const EdgeInsets.fromLTRB(16, 12, 12, 0),
         child: Row(
           children: [
+            const PandaMark(width: 34),
+            const SizedBox(width: 10),
             Text('PANDAPOINTER',
-                style: ppLabel(color: Pp.text, size: 18)
-                    .copyWith(letterSpacing: 3)),
+                style: ppLabel(color: Pp.text, size: 17)
+                    .copyWith(letterSpacing: 2.4)),
             const Spacer(),
             if (_pairing != null)
               Semantics(
                 button: true,
                 label: 'Connexion : ${_link.status}',
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(12),
-                  onTap: _openSettings,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 12),
-                    child: Row(children: [
-                      StatusDot(color: _statusColor),
-                      const SizedBox(width: 8),
-                      Text(
-                        _link.online
-                            ? _pairing!.pcName
-                            : (_link.connected || _searching
-                                ? 'CONNEXION...'
-                                : 'HORS LIGNE'),
-                        style: ppMono(color: _statusColor),
+                child: ExcludeSemantics(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _openSettings,
+                    child: Container(
+                      height: 40,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      decoration: BoxDecoration(
+                        color: Pp.panel,
+                        border: Border.all(color: Pp.edge, width: 2),
                       ),
-                      const SizedBox(width: 10),
-                      const PpIcon('gears', size: 20, color: Pp.muted),
-                    ]),
+                      child: Row(children: [
+                        StatusDot(color: _statusColor),
+                        const SizedBox(width: 8),
+                        Text(
+                          (_link.online
+                                  ? _pairing!.pcName
+                                  : (_link.connected || _searching
+                                      ? 'Connexion...'
+                                      : 'Hors ligne'))
+                              .toUpperCase(),
+                          style: ppMono(color: _statusColor),
+                        ),
+                        const SizedBox(width: 10),
+                        const PpIcon('gears', size: 18, color: Pp.muted),
+                      ]),
+                    ),
                   ),
                 ),
               ),
@@ -245,7 +254,7 @@ class _HomePageState extends State<HomePage>
   Widget _tabPills() {
     const labels = ['GYRO', 'PAVÉ', 'SLIDES'];
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 10, 20, 6),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
       child: AnimatedBuilder(
         animation: _tabs.animation!,
         builder: (context, _) {
@@ -253,7 +262,7 @@ class _HomePageState extends State<HomePage>
           return Row(
             children: [
               for (var i = 0; i < labels.length; i++) ...[
-                if (i > 0) const SizedBox(width: 8),
+                if (i > 0) const SizedBox(width: 6),
                 Expanded(
                   child: Semantics(
                     button: true,
@@ -267,16 +276,16 @@ class _HomePageState extends State<HomePage>
                           height: 46,
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color: current == i
-                                ? Pp.accent
-                                : const Color(0xFF241C17),
-                            borderRadius: BorderRadius.circular(12),
+                            color: current == i ? Pp.accent : Pp.panel,
+                            border: Border.all(
+                                color: current == i ? Pp.accentDeep : Pp.edge,
+                                width: 2),
                           ),
                           child: Text(labels[i],
                               style: ppLabel(
-                                      color: current == i ? Pp.bg : Pp.muted,
+                                      color: current == i ? Pp.text : Pp.muted,
                                       size: 13)
-                                  .copyWith(letterSpacing: 1.5)),
+                                  .copyWith(letterSpacing: 1.8)),
                         ),
                       ),
                     ),
@@ -294,10 +303,9 @@ class _HomePageState extends State<HomePage>
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      showDragHandle: true,
       builder: (context) => Padding(
         padding: EdgeInsets.fromLTRB(
-            20, 0, 20, 20 + MediaQuery.of(context).viewInsets.bottom),
+            20, 20, 20, 20 + MediaQuery.of(context).viewInsets.bottom),
         child: ListenableBuilder(
           listenable: _link,
           builder: (context, _) => SingleChildScrollView(
@@ -365,7 +373,6 @@ class _HomePageState extends State<HomePage>
                     final ok = await showDialog<bool>(
                       context: context,
                       builder: (context) => AlertDialog(
-                        backgroundColor: Pp.panel,
                         title: const Text('Oublier ce PC ?'),
                         content: const Text(
                             'Tu devras refaire l\'appairage avec le QR code pour le piloter à nouveau.'),

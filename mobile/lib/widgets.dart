@@ -1,4 +1,5 @@
-// Les pièces de la télécommande : touche en relief, molette concave, jauge à segments, icônes.
+// Les pièces de l'interface : touche-bloc, pavé de maintien, jauge à segments, interrupteur carré,
+// panda, quadrillage. Tout est rectangulaire et plat (voir theme.dart).
 
 import 'dart:math' as math;
 
@@ -24,6 +25,18 @@ class PpIcon extends StatelessWidget {
       );
 }
 
+/// Le panda roux (le même que dans Coche et sur le site).
+class PandaMark extends StatelessWidget {
+  const PandaMark({super.key, this.width = 40});
+  final double width;
+  @override
+  Widget build(BuildContext context) => SvgPicture.asset(
+        'assets/brand/panda.svg',
+        width: width,
+        excludeFromSemantics: true,
+      );
+}
+
 /// Petit titre de section, en lettres espacées.
 class PpSection extends StatelessWidget {
   const PpSection(this.text, {super.key});
@@ -33,7 +46,7 @@ class PpSection extends StatelessWidget {
       Text(text.toUpperCase(), style: ppLabel());
 }
 
-/// Panneau de réglages arrondi.
+/// Bloc de réglages : aplat, contour net.
 class PpPanel extends StatelessWidget {
   const PpPanel({super.key, required this.child, this.padding});
   final Widget child;
@@ -41,17 +54,17 @@ class PpPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         width: double.infinity,
-        padding: padding ?? const EdgeInsets.fromLTRB(18, 16, 18, 16),
+        padding: padding ?? const EdgeInsets.fromLTRB(16, 14, 16, 14),
         decoration: BoxDecoration(
           color: Pp.panel,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFF2B211B)),
+          border: Border.all(color: Pp.edge, width: 2),
         ),
         child: child,
       );
 }
 
-/// Touche en relief. Réagit dès que le doigt se pose (important pour maintenir un clic).
+/// Touche en forme de bloc : une face et un flanc dessous, comme un cube vu de côté.
+/// Réagit dès que le doigt se pose (important pour maintenir un clic).
 /// - [onTap] : appelé au relâchement (une touche « simple »).
 /// - [onDown] / [onUp] : pour les touches qu'on maintient (clic maintenu, glisser-déposer).
 class RaisedKey extends StatefulWidget {
@@ -79,6 +92,7 @@ class RaisedKey extends StatefulWidget {
 
 class _RaisedKeyState extends State<RaisedKey> {
   bool _down = false;
+  static const _side = 6.0;
 
   void _set(bool v) {
     if (_down != v) setState(() => _down = v);
@@ -86,7 +100,10 @@ class _RaisedKeyState extends State<RaisedKey> {
 
   @override
   Widget build(BuildContext context) {
-    final fg = widget.accent ? Pp.bg : Pp.text;
+    final face = widget.accent ? Pp.accent : Pp.keyTop;
+    final side = widget.accent ? Pp.accentDeep : Pp.depth;
+    final line = widget.accent ? Pp.accentDeep : Pp.edge;
+    final sink = _down ? _side - 2 : 0.0;
     return Semantics(
       button: true,
       label: widget.label,
@@ -107,56 +124,54 @@ class _RaisedKeyState extends State<RaisedKey> {
             widget.onUp?.call();
           },
           child: SizedBox(
-            height: widget.height + 6,
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 60),
-                margin: EdgeInsets.only(top: _down ? 4 : 0),
-                height: widget.height,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: widget.accent
-                        ? const [Pp.accentSoft, Pp.accent]
-                        : const [Pp.keyTop, Pp.keyBottom],
-                  ),
-                  border: Border(
-                    top: BorderSide(
-                        color:
-                            widget.accent ? const Color(0xFFFFB08E) : Pp.edge),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                        color: Pp.depth, offset: Offset(0, _down ? 1 : 5)),
-                  ],
+            height: widget.height + _side,
+            child: Stack(
+              children: [
+                // flanc du bloc
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: _side,
+                  height: widget.height,
+                  child: ColoredBox(color: side),
                 ),
-                alignment: Alignment.center,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (widget.icon != null) ...[
-                      PpIcon(widget.icon!, size: 22, color: fg),
-                      const SizedBox(width: 10),
-                    ],
-                    Flexible(
-                      child: Text(
-                        widget.label,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontFamily: Pp.display,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                          letterSpacing: 2,
-                          color: fg,
-                        ),
-                      ),
+                // face du bloc
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: sink,
+                  height: widget.height,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: face,
+                      border: Border.all(color: line, width: 2),
                     ),
-                  ],
+                    alignment: Alignment.center,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (widget.icon != null) ...[
+                          PpIcon(widget.icon!, size: 22, color: Pp.text),
+                          const SizedBox(width: 10),
+                        ],
+                        Flexible(
+                          child: Text(
+                            widget.label,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: Pp.display,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 14,
+                              letterSpacing: 1.6,
+                              color: Pp.text,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ),
@@ -165,8 +180,8 @@ class _RaisedKeyState extends State<RaisedKey> {
   }
 }
 
-/// La grosse molette concave : on la maintient pour bouger (ou pointer).
-/// Elle s'allume quand [active].
+/// Le grand carré qu'on maintient pour bouger (ou pointer). Il devient roux quand [active].
+/// Quatre équerres dans les coins : un viseur.
 class HoldDial extends StatelessWidget {
   const HoldDial({
     super.key,
@@ -180,51 +195,58 @@ class HoldDial extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final inner = size * 0.6;
+    const side = 8.0;
     return Semantics(
       button: true,
       label: label,
       child: ExcludeSemantics(
-        child: Container(
+        child: SizedBox(
           width: size,
-          height: size,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: const RadialGradient(
-              center: Alignment(0, -0.3),
-              colors: [Color(0xFF3A2D25), Color(0xFF1E1713)],
-            ),
-            boxShadow: [
-              const BoxShadow(color: Pp.depth, offset: Offset(0, 10)),
-              BoxShadow(
-                  color: active ? Pp.accent : const Color(0xFF241C17),
-                  spreadRadius: 8),
-            ],
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+          height: size + side,
+          child: Stack(
             children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 120),
-                width: inner,
-                height: inner,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: active ? Pp.accent.withAlpha(60) : Colors.transparent,
-                  border: Border.all(color: Pp.accent, width: 3),
-                  boxShadow: [
-                    BoxShadow(
-                        color: Pp.accent.withAlpha(active ? 140 : 60),
-                        blurRadius: active ? 34 : 22),
-                  ],
-                ),
-                child: CustomPaint(painter: _MoveGlyphPainter(Pp.accent)),
+              Positioned(
+                left: 0,
+                top: side,
+                width: size,
+                height: size,
+                child: ColoredBox(color: active ? Pp.accentDeep : Pp.depth),
               ),
-              SizedBox(height: size * 0.04),
-              Text(label.toUpperCase(),
-                  textAlign: TextAlign.center,
-                  style: ppLabel(color: const Color(0xFFC9B5A4), size: 13)
-                      .copyWith(letterSpacing: 3)),
+              Positioned(
+                left: 0,
+                top: active ? side - 3 : 0,
+                width: size,
+                height: size,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: active ? Pp.accent : Pp.panel,
+                    border: Border.all(
+                        color: active ? Pp.accentDeep : Pp.edge, width: 3),
+                  ),
+                  child: CustomPaint(
+                    painter: _ViewfinderPainter(active ? Pp.text : Pp.accent),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: size * 0.4,
+                          height: size * 0.4,
+                          child: CustomPaint(
+                              painter: _MoveGlyphPainter(
+                                  active ? Pp.text : Pp.accent)),
+                        ),
+                        SizedBox(height: size * 0.06),
+                        Text(label.toUpperCase(),
+                            textAlign: TextAlign.center,
+                            style: ppLabel(
+                                    color: active ? Pp.text : Pp.muted,
+                                    size: 13)
+                                .copyWith(letterSpacing: 2)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -233,7 +255,36 @@ class HoldDial extends StatelessWidget {
   }
 }
 
-/// Croix à quatre flèches (« déplacer »).
+/// Quatre équerres dans les coins du carré.
+class _ViewfinderPainter extends CustomPainter {
+  _ViewfinderPainter(this.color);
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.butt;
+    const inset = 16.0, arm = 22.0;
+    final w = size.width, h = size.height;
+    void corner(double x, double y, double dx, double dy) {
+      canvas.drawLine(Offset(x, y), Offset(x + dx * arm, y), p);
+      canvas.drawLine(Offset(x, y), Offset(x, y + dy * arm), p);
+    }
+
+    corner(inset, inset, 1, 1);
+    corner(w - inset, inset, -1, 1);
+    corner(inset, h - inset, 1, -1);
+    corner(w - inset, h - inset, -1, -1);
+  }
+
+  @override
+  bool shouldRepaint(_ViewfinderPainter old) => old.color != color;
+}
+
+/// Croix à quatre flèches (« déplacer »), traits francs, sans bouts arrondis.
 class _MoveGlyphPainter extends CustomPainter {
   _MoveGlyphPainter(this.color);
   final Color color;
@@ -243,12 +294,12 @@ class _MoveGlyphPainter extends CustomPainter {
     final p = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
-      ..strokeWidth = size.width * 0.035
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
+      ..strokeWidth = size.width * 0.07
+      ..strokeCap = StrokeCap.square
+      ..strokeJoin = StrokeJoin.miter;
     final c = size.center(Offset.zero);
-    final r = size.width * 0.24;
-    final a = size.width * 0.06;
+    final r = size.width * 0.42;
+    final a = size.width * 0.12;
     for (var i = 0; i < 4; i++) {
       final ang = i * math.pi / 2;
       final d = Offset(math.cos(ang), math.sin(ang));
@@ -262,6 +313,29 @@ class _MoveGlyphPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_MoveGlyphPainter old) => old.color != color;
+}
+
+/// Quadrillage discret (des cases, comme un monde en cubes) : donne du grain sans dégradé.
+class PpGrid extends CustomPainter {
+  const PpGrid({this.step = 28, this.color = const Color(0x14F8F1E6)});
+  final double step;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()
+      ..color = color
+      ..strokeWidth = 1;
+    for (var x = step; x < size.width; x += step) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), p);
+    }
+    for (var y = step; y < size.height; y += step) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), p);
+    }
+  }
+
+  @override
+  bool shouldRepaint(PpGrid old) => old.step != step || old.color != color;
 }
 
 /// Jauge à segments : on touche ou on glisse pour régler. [value] va de 0 à 1.
@@ -302,7 +376,7 @@ class SegGauge extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(label.toUpperCase(), style: ppLabel()),
-                Text(display, style: ppMono()),
+                Text(display, style: ppMono(size: 14)),
               ],
             ),
             LayoutBuilder(
@@ -318,13 +392,10 @@ class SegGauge extends StatelessWidget {
                       for (var i = 0; i < segments; i++)
                         Expanded(
                           child: Container(
-                            height: 16,
+                            height: 18,
                             margin: EdgeInsets.only(
                                 right: i == segments - 1 ? 0 : 3),
-                            decoration: BoxDecoration(
-                              color: i < lit ? Pp.accent : Pp.segOff,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
+                            color: i < lit ? Pp.accent : Pp.segOff,
                           ),
                         ),
                     ],
@@ -337,6 +408,48 @@ class SegGauge extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Interrupteur carré : un rail rectangulaire et un bloc qui glisse.
+class PpToggle extends StatelessWidget {
+  const PpToggle({super.key, required this.value, required this.onChanged});
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        toggled: value,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => onChanged(!value),
+          child: SizedBox(
+            width: 64,
+            height: 48,
+            child: Center(
+              child: Container(
+                width: 56,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: value ? Pp.accent : Pp.panel,
+                  border: Border.all(
+                      color: value ? Pp.accentDeep : Pp.edge, width: 2),
+                ),
+                child: AnimatedAlign(
+                  duration: const Duration(milliseconds: 90),
+                  alignment:
+                      value ? Alignment.centerRight : Alignment.centerLeft,
+                  child: Container(
+                    width: 22,
+                    height: 22,
+                    margin: const EdgeInsets.symmetric(horizontal: 2),
+                    color: value ? Pp.text : Pp.muted,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
 }
 
 /// Ligne « texte + interrupteur ».
@@ -369,25 +482,61 @@ class PpSwitchRow extends StatelessWidget {
                 ],
               ),
             ),
-            Switch(value: value, onChanged: onChanged),
+            PpToggle(value: value, onChanged: onChanged),
           ],
         ),
       );
 }
 
-/// Point de statut : vert = en ligne, orange = connexion en cours, gris = éteint.
-class StatusDot extends StatelessWidget {
-  const StatusDot({super.key, required this.color, this.glow = true});
-  final Color color;
-  final bool glow;
+/// Section repliable (à la place du menu déroulant standard) : titre + petite flèche carrée.
+class PpCollapse extends StatefulWidget {
+  const PpCollapse({super.key, required this.title, required this.children});
+  final String title;
+  final List<Widget> children;
+
   @override
-  Widget build(BuildContext context) => Container(
-        width: 9,
-        height: 9,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: color,
-          boxShadow: glow ? [BoxShadow(color: color, blurRadius: 8)] : null,
-        ),
+  State<PpCollapse> createState() => _PpCollapseState();
+}
+
+class _PpCollapseState extends State<PpCollapse> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Semantics(
+            button: true,
+            expanded: _open,
+            label: widget.title,
+            child: ExcludeSemantics(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => setState(() => _open = !_open),
+                child: SizedBox(
+                  height: 52,
+                  child: Row(children: [
+                    Expanded(child: Text(widget.title, style: ppLabel())),
+                    RotatedBox(
+                      quarterTurns: _open ? 3 : 1,
+                      child: PpIcon('arrow_right',
+                          size: 22, color: _open ? Pp.accent : Pp.muted),
+                    ),
+                  ]),
+                ),
+              ),
+            ),
+          ),
+          if (_open) ...widget.children,
+        ],
       );
+}
+
+/// Pastille de statut, carrée : vert = en ligne, jaune = connexion en cours, gris = éteint.
+class StatusDot extends StatelessWidget {
+  const StatusDot({super.key, required this.color});
+  final Color color;
+  @override
+  Widget build(BuildContext context) =>
+      Container(width: 10, height: 10, color: color);
 }

@@ -221,18 +221,13 @@ git tag v0.1.0
 git push --tags
 ```
 
-**Signature de l'APK (recommandé, une seule fois).** Sans clé, l'APK est signé avec une clé de test : il s'installe, mais une future mise à jour obligera à désinstaller l'ancienne version. Pour une vraie clé :
+**Signature de l'APK (une seule fois).** Sans clé, l'APK est signé avec une clé de test : il s'installe, mais une future mise à jour obligera à désinstaller l'ancienne version. Le script `tools/make-android-key.ps1` fabrique la vraie clé, la range hors du dépôt (`%USERPROFILE%\PandaPointer-signing\`) et ajoute les secrets GitHub `ANDROID_KEYSTORE_B64` et `ANDROID_KEYSTORE_PASSWORD` (automatiquement avec GitHub CLI, sinon il te dit quoi coller) :
 
 ```
-keytool -genkeypair -v -keystore release.jks -alias pandapointer -keyalg RSA -keysize 2048 -validity 10000
+powershell -ExecutionPolicy Bypass -File tools\make-android-key.ps1
 ```
 
-Puis dans le dépôt GitHub, *Settings → Secrets and variables → Actions* :
-
-- `ANDROID_KEYSTORE_PASSWORD` : le mot de passe choisi (le même pour le magasin et la clé) ;
-- `ANDROID_KEYSTORE_B64` : le contenu de `release.jks` en base64 (PowerShell : `[Convert]::ToBase64String([IO.File]::ReadAllBytes("release.jks"))`).
-
-Garde `release.jks` hors du dépôt et sauvegardé : sans lui, plus de mises à jour possibles pour les téléphones qui ont l'appli.
+**Sauvegarde le dossier de la clé** (clé USB, cloud perso) et ne le mets jamais dans le dépôt : sans lui, plus de mises à jour possibles pour les téléphones qui ont l'appli.
 
 ## Limites connues
 
@@ -244,8 +239,9 @@ Garde `release.jks` hors du dépôt et sauvegardé : sans lui, plus de mises à 
 
 ## Crédits et licences
 
-- Polices **Space Grotesk** et **JetBrains Mono** : licence SIL OFL (textes dans `mobile/assets/fonts/`).
+- Polices **Bricolage Grotesque** : licence SIL OFL (textes dans `mobile/assets/fonts/`).
 - Icônes **Papicons** : licence MIT (`mobile/assets/icons/LICENSE-Papicons.txt`).
 - Côté PC : [enigo](https://crates.io/crates/enigo), [windows-sys](https://crates.io/crates/windows-sys), [chacha20poly1305](https://crates.io/crates/chacha20poly1305), [qrcode](https://crates.io/crates/qrcode) et leurs dépendances. Côté téléphone : Flutter, [mobile_scanner](https://pub.dev/packages/mobile_scanner), [pointycastle](https://pub.dev/packages/pointycastle), [sensors_plus](https://pub.dev/packages/sensors_plus) et d'autres.
 - Le code et l'icône du projet ont été écrits avec l'aide de Claude (Anthropic).
-- Projet de **Panda** ([the-panda-roux-38](https://github.com/the-panda-roux-38)). Aucune licence n'est encore choisie : en l'absence de licence, tous droits réservés. Si tu veux que d'autres puissent réutiliser le code, ajoute un fichier `LICENSE` (MIT est le choix le plus simple).
+- Projet de **Panda** ([the-panda-roux-38](https://github.com/the-panda-roux-38)).
+- **Licence** : les applications compilées sont gratuites (téléchargement et usage libres) ; le code source reste réservé à son auteur. Voir [`LICENSE`](LICENSE).

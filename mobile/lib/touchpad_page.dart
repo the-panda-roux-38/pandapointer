@@ -378,42 +378,38 @@ class _TouchpadPageState extends State<TouchpadPage> {
               child: Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: const Alignment(0, -0.4),
-                    radius: 1.1,
-                    colors: active
-                        ? const [Color(0xFF3A2D25), Color(0xFF241C17)]
-                        : const [Color(0xFF2A211B), Pp.panel],
-                  ),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                      color: active ? Pp.accent : Pp.edge,
-                      width: active ? 2 : 1),
-                  boxShadow: const [
-                    BoxShadow(color: Pp.depth, offset: Offset(0, 6)),
-                  ],
+                  color: active ? Pp.keyBottom : Pp.panel,
+                  border:
+                      Border.all(color: active ? Pp.accent : Pp.edge, width: 3),
                 ),
+                foregroundDecoration: null,
                 alignment: Alignment.center,
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: active
-                      ? Text(
-                          '${_fingers.length} doigt${_fingers.length > 1 ? 's' : ''}',
-                          style: ppMono(color: Pp.accent, size: 30),
-                        )
-                      : const Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _Hint('1 DOIGT',
-                                'bouger · tap = clic\ndouble-tap + glisser = cliquer-glisser'),
-                            _Hint('2 DOIGTS',
-                                'scroll · pincer = zoom · tap = clic droit'),
-                            _Hint('3 DOIGTS',
-                                'balayer = vue des tâches, bureau, appli'),
-                            _Hint('4 DOIGTS', 'balayer = changer de bureau'),
-                          ],
-                        ),
+                child: CustomPaint(
+                  painter: const PpGrid(),
+                  child: Container(
+                    alignment: Alignment.center,
+                    width: double.infinity,
+                    height: double.infinity,
+                    padding: const EdgeInsets.all(24),
+                    child: active
+                        ? Text(
+                            '${_fingers.length} doigt${_fingers.length > 1 ? 's' : ''}',
+                            style: ppMono(color: Pp.accent, size: 30),
+                          )
+                        : const Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _Hint('1 DOIGT',
+                                  'bouger · tap = clic\ndouble-tap + glisser = cliquer-glisser'),
+                              _Hint('2 DOIGTS',
+                                  'scroll · pincer = zoom · tap = clic droit'),
+                              _Hint('3 DOIGTS',
+                                  'balayer = vue des tâches, bureau, appli'),
+                              _Hint('4 DOIGTS', 'balayer = changer de bureau'),
+                            ],
+                          ),
+                  ),
                 ),
               ),
             ),
@@ -436,34 +432,28 @@ class _TouchpadPageState extends State<TouchpadPage> {
               ),
             ),
           ]),
-          Theme(
-            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-            child: ExpansionTile(
-              tilePadding: EdgeInsets.zero,
-              iconColor: Pp.accent,
-              collapsedIconColor: Pp.muted,
-              title: Text('RÉGLAGES DU PAVÉ', style: ppLabel()),
-              children: [
-                SegGauge(
-                  label: 'Vitesse',
-                  display: _speed.toStringAsFixed(1),
-                  value: (_speed - 0.5) / 3.5,
-                  onChanged: (v) => setState(() => _speed = 0.5 + v * 3.5),
-                ),
-                SegGauge(
-                  label: 'Accélération',
-                  display: '${(_accel * 100).round()} %',
-                  value: _accel,
-                  onChanged: (v) => setState(() => _accel = v),
-                ),
-                PpSwitchRow(
-                  label: 'Scroll naturel',
-                  hint: 'Doigts vers le haut = la page monte',
-                  value: _naturalScroll,
-                  onChanged: (v) => setState(() => _naturalScroll = v),
-                ),
-              ],
-            ),
+          PpCollapse(
+            title: 'RÉGLAGES DU PAVÉ',
+            children: [
+              SegGauge(
+                label: 'Vitesse',
+                display: _speed.toStringAsFixed(1),
+                value: (_speed - 0.5) / 3.5,
+                onChanged: (v) => setState(() => _speed = 0.5 + v * 3.5),
+              ),
+              SegGauge(
+                label: 'Accélération',
+                display: '${(_accel * 100).round()} %',
+                value: _accel,
+                onChanged: (v) => setState(() => _accel = v),
+              ),
+              PpSwitchRow(
+                label: 'Scroll naturel',
+                hint: 'Doigts vers le haut = la page monte',
+                value: _naturalScroll,
+                onChanged: (v) => setState(() => _naturalScroll = v),
+              ),
+            ],
           ),
         ],
       ),
