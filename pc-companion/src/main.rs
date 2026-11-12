@@ -177,7 +177,7 @@ fn run(
             match cmd {
                 Command::Pair => {
                     let dev = a.store.start_pairing();
-                    let url = secure::pair_url(&dev, &pc_name(), port);
+                    let url = secure::pair_url(&dev, &pc_name(), port, local_ip());
                     println!("\nScanne ce QR code avec l'appli PandaPointer (valable 5 minutes) :\n");
                     if let Some(qr) = secure::qr_text(&url) {
                         println!("{qr}");

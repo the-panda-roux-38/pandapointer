@@ -107,12 +107,17 @@ class Pairing {
       {required this.id,
       required this.key,
       required this.pcName,
-      this.port = 4210});
+      this.port = 4210,
+      this.ip});
 
   final Uint8List id; // 8 octets
   final Uint8List key; // 32 octets
   final String pcName;
   final int port;
+
+  /// Adresse du PC au moment de l'appairage (écrite dans le QR code) : évite la recherche
+  /// par diffusion, que certaines box ou le Wi-Fi bloquent. Non conservée dans le badge.
+  final String? ip;
 
   /// Lit le lien du QR code : pandapointer://pair?v=1&id=...&k=...&n=...&p=4210
   static Pairing? fromUrl(String text) {
@@ -130,7 +135,18 @@ class Pairing {
       key: key,
       pcName: uri.queryParameters['n'] ?? 'PC',
       port: int.tryParse(uri.queryParameters['p'] ?? '') ?? 4210,
+      ip: _cleanIp(uri.queryParameters['a']),
     );
+  }
+
+  static String? _cleanIp(String? v) {
+    if (v == null) return null;
+    final m = RegExp(r'^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$').firstMatch(v);
+    if (m == null) return null;
+    for (var i = 1; i <= 4; i++) {
+      if (int.parse(m.group(i)!) > 255) return null;
+    }
+    return v;
   }
 
   Map<String, Object> toJson() => {

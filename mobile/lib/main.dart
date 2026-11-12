@@ -124,7 +124,18 @@ class _HomePageState extends State<HomePage>
     _link.setPairing(pairing);
     if (!mounted) return;
     setState(() => _pairing = pairing);
-    _snack('Appairé avec ${pairing.pcName}. Je cherche le PC...');
+    final ip = pairing.ip;
+    if (ip != null) {
+      // Le QR code donne l'adresse du PC : on y va tout droit, sans chercher.
+      _snack('Appairé avec ${pairing.pcName}. Connexion...');
+      _savedIp = ip;
+      Storage.saveLastIp(ip);
+      await _link.connect(ip);
+      await Future<void>.delayed(const Duration(seconds: 4));
+      if (!mounted || _link.online) return;
+    } else {
+      _snack('Appairé avec ${pairing.pcName}. Je cherche le PC...');
+    }
     await _search(auto: true);
   }
 

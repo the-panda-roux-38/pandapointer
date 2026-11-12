@@ -127,7 +127,7 @@ pub fn unseal(session: &[u8; 32], dir: u8, data: &[u8]) -> Option<(u64, Vec<u8>)
 }
 
 /// Lien d'appairage placé dans le QR code.
-pub fn pair_url(dev: &Device, pc_name: &str, port: u16) -> String {
+pub fn pair_url(dev: &Device, pc_name: &str, port: u16, ip: Option<std::net::IpAddr>) -> String {
     let mut name = String::new();
     for b in pc_name.bytes() {
         if b.is_ascii_alphanumeric() || b == b'-' || b == b'_' || b == b'.' {
@@ -136,7 +136,12 @@ pub fn pair_url(dev: &Device, pc_name: &str, port: u16) -> String {
             name.push_str(&format!("%{b:02X}"));
         }
     }
-    format!("pandapointer://pair?v=1&id={}&k={}&n={}&p={}", hex(&dev.id), hex(&dev.key), name, port)
+    let mut url = format!("pandapointer://pair?v=1&id={}&k={}&n={}&p={}", hex(&dev.id), hex(&dev.key), name, port);
+    // Adresse du PC : le téléphone s'y connecte directement, sans avoir à chercher.
+    if let Some(std::net::IpAddr::V4(a)) = ip {
+        url.push_str(&format!("&a={a}"));
+    }
+    url
 }
 
 /// Le QR code en caractères (pour la console), 2 lignes de pixels par ligne de texte.
@@ -503,9 +508,11 @@ mod tests {
     #[test]
     fn pair_url_and_qr() {
         let dev = Device { id: ID, key: KEY, name: "x".into() };
-        let url = pair_url(&dev, "PC PANDA é", 4210);
+        let url = pair_url(&dev, "PC PANDA é", 4210, None);
         assert!(url.starts_with("pandapointer://pair?v=1&id=0102030405060708&k=000102"));
         assert!(url.ends_with("&n=PC%20PANDA%20%C3%A9&p=4210"));
+        let with_ip = pair_url(&dev, "x", 4210, Some("192.168.1.42".parse().unwrap()));
+        assert!(with_ip.ends_with("&p=4210&a=192.168.1.42"));
         assert!(qr_text(&url).unwrap().lines().count() > 10);
         let bmp = qr_bmp(&url).unwrap();
         assert_eq!(&bmp[..2], b"BM");
